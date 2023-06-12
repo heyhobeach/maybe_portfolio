@@ -1,9 +1,5 @@
-
-
-
+// 대망의 Array 배열
 #include <iostream>
-
-using namespace std;
 
 namespace MyArray {
     class Array;
@@ -62,10 +58,7 @@ namespace MyArray {
         void initialize_address(Address* current) {
             if (!current) return;
             if (current->level == dim - 1) {
-                if (size[current->level] > 0)
-                    current->next = new int[size[current->level]];
-                else
-                    current->next = nullptr;
+                current->next = new int[size[current->level]];
                 return;
             }
             current->next = new Address[size[current->level]];
@@ -80,19 +73,10 @@ namespace MyArray {
                 delete_address(static_cast<Address*>(current->next) + i);
             }
 
-            /*if (current->level == dim - 1) {
-                delete[] static_cast<int*>(current->next);
-                return;
-            }
-            delete[] static_cast<Address*>(current->next); if (current->level == dim - 1) 해당 조건일때 두번 메모리를 지우려고 함 그래서 런타임 에러 발생 */
-
-
             if (current->level == dim - 1) {
                 delete[] static_cast<int*>(current->next);
             }
-            else {
-                delete[] static_cast<Address*>(current->next);
-            }
+            delete[] static_cast<Address*>(current->next);
         }
         Int operator[](const int index);
         ~Array() {
@@ -107,10 +91,10 @@ namespace MyArray {
         Array* array;
 
     public:
-        Int(int index, int _level = 0, void* _data = nullptr, Array* _array = nullptr)
+        Int(int index, int _level = 0, void* _data = NULL, Array* _array = NULL)
             : level(_level), data(_data), array(_array) {
-            if (_array == nullptr || _level < 1 || index >= array->size[_level - 1]) {
-                data = nullptr;
+            if (_level < 1 || index >= array->size[_level - 1]) {
+                data = NULL;
                 return;
             }
             if (level == array->dim) {
@@ -146,7 +130,6 @@ namespace MyArray {
         return Int(index, 1, static_cast<void*>(top), this);
     }
 }  // namespace MyArray
-
 int main() {
     int size[] = { 2, 3, 4 };
     MyArray::Array arr(3, size);
@@ -166,5 +149,7 @@ int main() {
             }
         }
     }
-    return 0;
 }
+
+
+
