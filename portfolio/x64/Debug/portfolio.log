@@ -1,5 +1,1 @@
-﻿  pch.cpp
-  client.cpp
-C:\hehobeach\visual studio\maybe_portfolio\portfolio\client.cpp(31,37): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\hehobeach\visual studio\maybe_portfolio\portfolio\client.cpp(24,26): warning C4996: 'inet_addr': Use inet_pton() or InetPton() instead or define _WINSOCK_DEPRECATED_NO_WARNINGS to disable deprecated API warnings
-  portfolio.vcxproj -> C:\hehobeach\visual studio\maybe_portfolio\x64\Debug\portfolio.exe
+﻿  portfolio.vcxproj -> C:\hehobeach\visual studio\maybe_portfolio\x64\Debug\portfolio.exe

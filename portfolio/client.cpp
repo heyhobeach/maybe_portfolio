@@ -27,7 +27,7 @@ int main() {
 
 
 
-	char cMsg[] = "Client Send";
+	char cMsg[] = "Client say hi";
 	send(hSocket, cMsg, strlen(cMsg), 0);
 
 
