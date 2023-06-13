@@ -8,7 +8,7 @@
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
 #define PACKET_SIZE 1024
-#define SERVER_IP "192.168.219.106"
+#define SERVER_IP "192.168.219.106"// 서버의 ip로 맞춰줘야함
 #pragma once
 
 int main() {
