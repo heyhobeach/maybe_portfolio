@@ -1,5 +1,5 @@
 // testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
-//
+// 여기서 실시간 채팅 프로그램으로 바꿔야함
 
 #include "pch.h"
 #include <iostream>
@@ -23,7 +23,7 @@ int main() {
 	tAddr.sin_port = htons(PORT);//포트 번호 설정 2바이트 안에서 표현할 수 있는 숫자여야함
 	tAddr.sin_addr.s_addr = inet_addr(SERVER_IP);//IPv4 소수점 주소가 포함된 문자열 IN_ADDR 구조체의 주소로 변환한다 현재는 SERVER_IP의 주소를 변환중
 
-	connect(hSocket, (SOCKADDR*)&tAddr,sizeof(tAddr));//클라이언트 측은 bind 대신 connect 사용
+	connect(hSocket, (SOCKADDR*)&tAddr,sizeof(tAddr));//클라이언트 측은 bind 대신 connect 사용 
 
 
 
