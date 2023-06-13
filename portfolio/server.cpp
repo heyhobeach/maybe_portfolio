@@ -1,4 +1,4 @@
-﻿// testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
+// testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
 //
 
 #include "pch.h"
@@ -31,11 +31,11 @@ int main() {
 	SOCKET hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
 
 	char cBuffer[PACKET_SIZE] = {};
-	recv(hClient, cBuffer, PACKET_SIZE, 0);
+	recv(hClient, cBuffer, PACKET_SIZE, 0);//대상 소켓으로 보내온 정보를 받아주는 역활
 	printf("Recv Mssg : %s\n", cBuffer);
 
 	char cMsg[] = "Server Send";
-	send(hClient, cMsg, strlen(cMsg),0);
+	send(hClient, cMsg, strlen(cMsg), 0);
 
 	closesocket(hClient);
 	closesocket(hListen);
