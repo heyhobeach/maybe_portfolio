@@ -11,11 +11,30 @@
 
 #pragma once
 
+using namespace std;
+
+SOCKET hListen, hClient;
+
+void proc_recvs() {
+	char buff[PACKET_SIZE] = { 0 };
+	//string cmd;
+
+	while (!WSAGetLastError()) {
+		cout << "연결성공\n";
+		ZeroMemory(&buff, PACKET_SIZE);//ZeroMemory는 함수가 아닌 매크로
+		recv(hListen, buff, PACKET_SIZE, 0);//flag 0로 일반 데이터 수신
+		//소캣으로 연결하고 buff에 전달받은 데이터 저장, PACKET_SIZE는 읽을 데이터의 크기
+		cout << "client로부터 받은 메세지 : " << buff << endl;
+	}
+	cout << "연결 종료";
+
+}
+
 int main() {
 	WSADATA wsaData;// 윈도우 소켓 초기화 정보 저장하기 위한 구조체 이미 선언되어있음
 	WSAStartup(MAKEWORD(2, 2), &wsaData);//WSAStartup(소켓버전, WSADATA 구조체 주소); 인데 MAKEWORD를 통해서 정수값으로 변환해서 넣어줌 2번째는 WSADATA의 구조체 포인터 타입
 
-	SOCKET hListen;
+	//SOCKET hListen;
 	hListen = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//PF_INET IPV4타입 사용 일반적으로 사용하는 주소, SOCK_STREAM 연결지향형 소켓을 만든다 세번째 인자 protocoldms 통신규약 현재는 IPROTO_TCP로 TCP를 사용한다느 말
 
 	SOCKADDR_IN tListenAddr = {};//윈도우 소켓에서 소켓을 연결할 로컬 또는 원격 주소 지정하는데 사용
@@ -28,20 +47,27 @@ int main() {
 
 	SOCKADDR_IN tClntAddr = {};
 	int iClntSize = sizeof(tClntAddr);
-	SOCKET hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
+	hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
 
-	char cBuffer[PACKET_SIZE] = {};
-	recv(hClient, cBuffer, PACKET_SIZE, 0);//대상 소켓으로 보내온 정보를 받아주는 역활
-	printf("Recv Mssg : %s\n", cBuffer);
+	char cBuffer[PACKET_SIZE] = { 0 };
+	thread proc2(proc_recvs);
+	//recv(hClient, cBuffer, PACKET_SIZE, 0);//대상 소켓으로 보내온 정보를 받아주는 역활
+	//printf("Recv Mssg : %s\n", cBuffer);
 
-	char cMsg[] = "Server Send";
-	send(hClient, cMsg, strlen(cMsg), 0);
+	while (!WSAGetLastError()) {
+		cout << "입력 :";
+		cin >> cBuffer;
+		send(hClient, cBuffer, strlen(cBuffer), 0);
+	}proc2.join();
+
+	//char cMsg[] = "Server Send";
+	//send(hClient, cMsg, strlen(cMsg), 0);
 
 	closesocket(hClient);
 	closesocket(hListen);
 
 	WSACleanup();//소켓에서 사용하는 소멸자
-	std::cout << "Hello World\n";
+	//std::cout << "Hello World\n";
 
 	return 0;
 }

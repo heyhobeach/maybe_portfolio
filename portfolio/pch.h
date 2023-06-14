@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include <WinSock2.h>//윈도우 환경
 #include <thread>
-#include <string>
-
 
 // 여기에 미리 컴파일하려는 헤더 추가
 
