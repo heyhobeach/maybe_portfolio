@@ -1,8 +1,11 @@
 // testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
 // 여기서 실시간 채팅 프로그램으로 바꿔야함
+//06-14 주석처리한 부분이 집에가서 수정 해 볼 부분
+
 
 #include "pch.h"
 #include <iostream>
+#include <thread>
 
 #pragma comment(lib, "ws2_32")
 
@@ -24,6 +27,10 @@ int main() {
 	tAddr.sin_addr.s_addr = inet_addr(SERVER_IP);//IPv4 소수점 주소가 포함된 문자열 IN_ADDR 구조체의 주소로 변환한다 현재는 SERVER_IP의 주소를 변환중
 
 	connect(hSocket, (SOCKADDR*)&tAddr,sizeof(tAddr));//클라이언트 측은 bind 대신 connect 사용 
+	/*while(1){ //연결을 계속 시도하는 부분 연결 실패시 무한루프를 돌면서 계속 연결을 시도한다 연결 성공시 true를 반환함으로서 while을 벗어난다
+		if(!connect(skt, (SOCKADDR*)&addr, sizeof(addr))) break;//connect의 return 값은 성공시 0 실패시 -1이다 따라서 여기에 not을 붙임으로서 성공은 (!0)으로 True가 되고 실패는 (!-1)로 false를 만든다
+	}*/
+	std::thread proc1(proc_recv);//procv_recv함수 정의해야함
 
 
 
@@ -34,6 +41,7 @@ int main() {
 	char cBuffer[PACKET_SIZE] = {};
 	recv(hSocket, cBuffer, PACKET_SIZE, 0);
 	printf("Recv Mssg : %s\n", cBuffer);
+	//std::cout<<"Recv Msg :%s<<std::endl;
 
 
 	closesocket(hSocket);
