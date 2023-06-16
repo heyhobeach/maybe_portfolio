@@ -3,7 +3,7 @@
 
 #include "pch.h"
 #include <iostream>
-
+#include <stdint.h>
 #pragma comment(lib, "ws2_32")
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
@@ -14,7 +14,7 @@
 using namespace std;
 
 SOCKET hListen, hClient;
-
+u_long nonBlockingMode = 1;//굳이 1이 아니더라도 괜찮음 0이면 블로킹 나머지는 논블로킹임
 void proc_recvs() {
 	char buff[PACKET_SIZE] = { 0 };
 	//string cmd;
@@ -22,7 +22,8 @@ void proc_recvs() {
 	while (!WSAGetLastError()) {
 		cout << "연결성공\n";
 		ZeroMemory(&buff, PACKET_SIZE);//ZeroMemory는 함수가 아닌 매크로
-		recv(hListen, buff, PACKET_SIZE, 0);//flag 0로 일반 데이터 수신
+		//ioctlsocket(hClient, FIONBIO, &nonBlockingMode);
+		recv(hClient, buff, PACKET_SIZE, 0);//flag 0로 일반 데이터 수신
 		//소캣으로 연결하고 buff에 전달받은 데이터 저장, PACKET_SIZE는 읽을 데이터의 크기
 		cout << "client로부터 받은 메세지 : " << buff << endl;
 	}
@@ -36,6 +37,9 @@ int main() {
 
 	//SOCKET hListen;
 	hListen = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//PF_INET IPV4타입 사용 일반적으로 사용하는 주소, SOCK_STREAM 연결지향형 소켓을 만든다 세번째 인자 protocoldms 통신규약 현재는 IPROTO_TCP로 TCP를 사용한다느 말
+	if (ioctlsocket(hListen, FIONBIO, &nonBlockingMode) == INVALID_SOCKET) {//SOCKET socket 실패시 INVALD_SOCKET 리턴 즉 ioctlsocket
+		return 0;
+	}
 
 	SOCKADDR_IN tListenAddr = {};//윈도우 소켓에서 소켓을 연결할 로컬 또는 원격 주소 지정하는데 사용
 	tListenAddr.sin_family = AF_INET;//sin_family는 반드시 AF_INET이어야함
@@ -47,18 +51,55 @@ int main() {
 
 	SOCKADDR_IN tClntAddr = {};
 	int iClntSize = sizeof(tClntAddr);
-	hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
+	while (true) {
+		hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
+		if (hClient == INVALID_SOCKET) {
+			if (WSAGetLastError() == WSAEWOULDBLOCK)
+				continue;//non block하기위한 부분 block되면 continue해라
+			break;//block도 아니고 소켓 생성 실패하면 break
+		}
+		cout << "Client Connected" << endl;
+		//recv 부분
+		while (true) {
+			char recvBuffer[1000];
+			int recvLen = recv(hClient, recvBuffer, PACKET_SIZE, 0);
+			if (recvLen == SOCKET_ERROR) {
+				if (WSAGetLastError() == WSAEWOULDBLOCK) {
+					continue;//non block하기위한 부분 block되면 continue해라
+				}
+				break;
+			}
+			else if (recvLen == 0) {
+				break;
+			}
+
+			cout << "Recv Data Len=" << recvLen << endl;
+
+			while (true) {
+				if (send(hClient, recvBuffer, strlen(recvBuffer), 0) == SOCKET_ERROR) {
+					if (WSAGetLastError() == WSAEWOULDBLOCK) {
+						continue;//기본적으로 continue
+					}
+					break;
+				}
+				cout << "send Data: Len" << recvLen << endl;
+				break;
+			}
+		}
+	}
+
+	WSACleanup();//소켓에서 사용하는 소멸자
 
 	char cBuffer[PACKET_SIZE] = { 0 };
 	thread proc2(proc_recvs);
 	//recv(hClient, cBuffer, PACKET_SIZE, 0);//대상 소켓으로 보내온 정보를 받아주는 역활
 	//printf("Recv Mssg : %s\n", cBuffer);
 
-	while (!WSAGetLastError()) {
+	/*while (!WSAGetLastError()) {
 		cout << "입력 :";
 		cin >> cBuffer;
 		send(hClient, cBuffer, strlen(cBuffer), 0);
-	}proc2.join();
+	}proc2.join();*/
 
 	//char cMsg[] = "Server Send";
 	//send(hClient, cMsg, strlen(cMsg), 0);
