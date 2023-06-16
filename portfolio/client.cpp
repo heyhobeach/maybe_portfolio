@@ -6,6 +6,7 @@
 #include "pch.h"
 #include <iostream>
 #include <string.h>
+#include <WS2tcpip.h>
 
 
 #pragma comment(lib, "ws2_32")
@@ -42,48 +43,103 @@ int main() {
 	WSAStartup(MAKEWORD(2, 2), &wsaData);//WSAStartup(소켓버전, WSADATA 구조체 주소); 인데 MAKEWORD를 통해서 정수값으로 변환해서 넣어줌 2번째는 WSADATA의 구조체 포인터 타입
 
 
-	hSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//PF_INET IPV4타입 사용 일반적으로 사용하는 주소, SOCK_STREAM 연결지향형 소켓을 만든다 세번째 인자 protocoldms 통신규약 현재는 IPROTO_TCP로 TCP를 사용한다느 말
+
+	hSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//PF_INET IPV4타입 사용 일반적으로 사용하는 주소, SOCK_STREAM 연결지향형 소켓을 만든다 세번째 인자 protocoldms 통신규약 현재는 IPROTO_TCP로 TCP를 사용한다는 말 0을 넣게 되면 첫 번째 둡ㄴ째 매개변수 기준으로 지정해줌 IPROTO_HOPOPTS와 같은 역활
+	if (hSocket == INVALID_SOCKET)
+		return 0;
+
+	u_long on = 1;
+	if (ioctlsocket(hSocket, FIONBIO, &on) == INVALID_SOCKET)//FIONBIO의 의미가 무엇인지
+		return 0;
+
 
 	SOCKADDR_IN tAddr = {};//윈도우 소켓에서 소켓을 연결할 로컬 또는 원격 주소 지정하는데 사용
+	memset(&tAddr, 0, sizeof(tAddr));//해당 문구의 의미가 무엇인지
 	tAddr.sin_family = AF_INET;//sin_family는 반드시 AF_INET이어야함
+	inet_pton(AF_INET, SERVER_IP, &tAddr.sin_addr);
+	//tAddr.sin_addr.s_addr = inet_addr(SERVER_IP);//해당 함수를 대신해서 inet_pton을 사용함 안정성문제 //IPv4 소수점 주소가 포함된 문자열 IN_ADDR 구조체의 주소로 변환한다 현재는 SERVER_IP의 주소를 변환중
 	tAddr.sin_port = htons(PORT);//포트 번호 설정 2바이트 안에서 표현할 수 있는 숫자여야함
-	tAddr.sin_addr.s_addr = inet_addr(SERVER_IP);//IPv4 소수점 주소가 포함된 문자열 IN_ADDR 구조체의 주소로 변환한다 현재는 SERVER_IP의 주소를 변환중
+
 
 	//connect(hSocket, (SOCKADDR*)&tAddr,sizeof(tAddr));//클라이언트 측은 bind 대신 connect 사용 
-	while(1){ //연결을 계속 시도하는 부분 연결 실패시 무한루프를 돌면서 계속 연결을 시도한다 연결 성공시 true를 반환함으로서 while을 벗어난다
-		if(!connect(hSocket, (SOCKADDR*)&tAddr, sizeof(tAddr))) break;//connect의 return 값은 성공시 0 실패시 -1이다 따라서 여기에 not을 붙임으로서 성공은 (!0)으로 True가 되고 실패는 (!-1)로 false를 만든다
-		cout << "연결실패";
+	while (1) { //연결을 계속 시도하는 부분 연결 실패시 무한루프를 돌면서 계속 연결을 시도한다 연결 성공시 true를 반환함으로서 while을 벗어난다
+		if (!connect(hSocket, (SOCKADDR*)&tAddr, sizeof(tAddr))) {
+			if (WSAGetLastError() == WSAEWOULDBLOCK)
+				continue;
+			if (WSAGetLastError() == WSAEISCONN)
+				break;
+
+			cout << "연결실패";
+			break;
+		}//connect의 return 값은 성공시 0 실패시 -1이다 따라서 여기에 not을 붙임으로서 성공은 (!0)으로 True가 되고 실패는 (!-1)로 false를 만든다
+
 
 	}
-	char cMsg[PACKET_SIZE] = { 0 };
-	std::thread proc1(proc_recv);//procv_recv함수 정의해야함
-	//char cMsg[PACKET_SIZE] = "Client say hi";
-	
 
-	while (!WSAGetLastError()) {
-		cin >> cMsg;
-		send(hSocket, cMsg, strlen(cMsg), 0);//전송하고자 하는 문자의 길이만큼
+	cout << "서버에 연결했습니다. Connected to Server" << endl;
+
+	char sendBuffer[100] = "Hello World";
+
+	while (true) {
+		if (send(hSocket, sendBuffer, sizeof(sendBuffer), 0) == SOCKET_ERROR) {
+			if (WSAGetLastError() == WSAEWOULDBLOCK) {
+				continue;
+			}
+			break;
+		}
+
+		cout << "데이터 전송 데이터 길이 = " << sizeof(sendBuffer) << endl;
+
+		while (true) {
+			char recvBuffer[PACKET_SIZE];
+			int recvLen = recv(hSocket, recvBuffer, PACKET_SIZE,0);
+			if (recvLen == SOCKET_ERROR) {
+				if (WSAGetLastError() == WSAEWOULDBLOCK) {
+					continue;
+				}
+				break;
+			}
+			else if (recvLen == 0) {
+				cout << "연결 끊김" << endl;
+				break;
+			}
+
+			cout << "수신한 데이터의 길이 =" << recvLen << endl;
+			break;
+		}
+
+		this_thread::sleep_for(1s);//해당 문구가 있어야하는 이유 지금 thread를 구현 하지 않았는데 왜 넣어야하는가
+
+		
+		/*char cMsg[PACKET_SIZE] = {0};
+		std::thread proc1(proc_recv);//procv_recv함수 정의해야함
+		//char cMsg[PACKET_SIZE] = "Client say hi";
+
+
+		while (!WSAGetLastError()) {
+			cin >> cMsg;
+			send(hSocket, cMsg, strlen(cMsg), 0);//전송하고자 하는 문자의 길이만큼
+		}proc1.join*/
+
+
+
+
+		//send(hSocket, cMsg, strlen(cMsg), 0);
+
+
+		//char cBuffer[PACKET_SIZE] = {};
+		//recv(hSocket, cBuffer, PACKET_SIZE, 0);
+		//printf("Recv Mssg : %s\n", cBuffer);
+		//std::cout<<"Recv Msg :%s<<std::endl;
+
+		closesocket(hSocket);
+
+
+		WSACleanup();//소켓에서 사용하는 소멸자
+		std::cout << "Hello World\n";
+
+		return 0;
 	}
-
-
-
-
-	//send(hSocket, cMsg, strlen(cMsg), 0);
-
-
-	//char cBuffer[PACKET_SIZE] = {};
-	//recv(hSocket, cBuffer, PACKET_SIZE, 0);
-	//printf("Recv Mssg : %s\n", cBuffer);
-	//std::cout<<"Recv Msg :%s<<std::endl;
-
-	proc1.join();
-	closesocket(hSocket);
-
-
-	WSACleanup();//소켓에서 사용하는 소멸자
-	std::cout << "Hello World\n";
-
-	return 0;
 }
 
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
