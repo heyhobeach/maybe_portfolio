@@ -1,154 +1,116 @@
-// testprojeect.cpp : ÀÌ ÆÄÀÏ¿¡´Â 'main' ÇÔ¼ö°¡ Æ÷ÇÔµË´Ï´Ù. °Å±â¼­ ÇÁ·Î±×·¥ ½ÇÇàÀÌ ½ÃÀÛµÇ°í Á¾·áµË´Ï´Ù.
-// ¿©±â¼­ ½Ç½Ã°£ Ã¤ÆÃ ÇÁ·Î±×·¥À¸·Î ¹Ù²ã¾ßÇÔ
-//06-14 ÁÖ¼®Ã³¸®ÇÑ ºÎºĞÀÌ Áı¿¡°¡¼­ ¼öÁ¤ ÇØ º¼ ºÎºĞ
+ï»¿
+// testprojeect.cpp : ì´ íŒŒì¼ì—ëŠ” 'main' í•¨ìˆ˜ê°€ í¬í•¨ë©ë‹ˆë‹¤. ê±°ê¸°ì„œ í”„ë¡œê·¸ë¨ ì‹¤í–‰ì´ ì‹œì‘ë˜ê³  ì¢…ë£Œë©ë‹ˆë‹¤.
+// ì—¬ê¸°ì„œ ì‹¤ì‹œê°„ ì±„íŒ… í”„ë¡œê·¸ë¨ìœ¼ë¡œ ë°”ê¿”ì•¼í•¨
+//ì‹¤í–‰ë˜ëŠ”ì½”ë“œ
 
 
 #include "pch.h"
 #include <iostream>
 #include <string.h>
 #include <WS2tcpip.h>
+#include <windows.h>
 
 
 #pragma comment(lib, "ws2_32")
 
-#define PORT	4578// ¿¹¾àµÈ Æ÷Æ®¸¦ Á¦¿ÜÇÏ°í »ç¿ëÇØ¾ßÇÔ  (ex) 21 : FTPÆ÷Æ®, 80 : HTTPÆ÷Æ®, 8080 : HTTPSÆ÷Æ®)
+#define PORT	4578// ì˜ˆì•½ëœ í¬íŠ¸ë¥¼ ì œì™¸í•˜ê³  ì‚¬ìš©í•´ì•¼í•¨  (ex) 21 : FTPí¬íŠ¸, 80 : HTTPí¬íŠ¸, 8080 : HTTPSí¬íŠ¸)
 #define PACKET_SIZE 1024
-#define SERVER_IP "192.168.219.105"// ¼­¹öÀÇ ip·Î ¸ÂÃçÁà¾ßÇÔ
+#define SERVER_IP "192.168.219.109"// ì„œë²„ì˜ ipë¡œ ë§ì¶°ì¤˜ì•¼í•¨
 
 #pragma once
 
 using namespace std;
 
-SOCKET hSocket;
+int main()
+{
+    WSAData wsaData;
+    if (::WSAStartup(MAKEWORD(2, 2), &wsaData))
+        return 0;
 
-void proc_recv() {
+    SOCKET clientSocket = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (clientSocket == INVALID_SOCKET)
+        return 0;
 
-	cout << "thread on" << endl;
-	char buff[PACKET_SIZE];
-	string cmd;
-	while (!WSAGetLastError()) {
-		cout << "¿¬°á ¼º°ø\n";
-		ZeroMemory(&buff, PACKET_SIZE);//buffºñ¿ì±â
-		recv(hSocket, buff, PACKET_SIZE, 0);
-		cmd = buff;
-		if (cmd == "hi") {//cmd°¡ hi¶ó¸é Áï ÀÔ·Â¹ŞÀº °ªÀÌ hi¶ó¸é break
-			break;
-		}
-		cout << "server·Î ºÎÅÍ ¹ŞÀº ¸Ş¼¼Áö :" << buff << endl;
-	}
+    u_long on = 1;
+    if (::ioctlsocket(clientSocket, FIONBIO, &on) == INVALID_SOCKET)
+        return 0;
+
+    SOCKADDR_IN serverAddr;
+    ::memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    ::inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr);
+    serverAddr.sin_port = ::htons(PORT);
+
+    // Connect
+    while (true)
+    {
+        if (::connect(clientSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
+        {
+            // ì›ë˜ ë¸”ë¡í–ˆì–´ì•¼ í–ˆëŠ”ë° ... ë„ˆê°€ ë…¼ë¸”ë¡œí‚¹ìœ¼ë¡œ í•˜ë¼ë©°?
+            if (::WSAGetLastError() == WSAEWOULDBLOCK)
+                continue;
+
+            if (::WSAGetLastError() == WSAEISCONN) {
+                cout << "ì—¬ê¸°ì— ê±¸ë¦¼" << endl;
+                break;
+            }
+
+            // Error
+            break;
+        }
+    }
+
+    cout << "Connected to Sever!" << endl;
+
+    char sendBuffer[100] = "Hello World";
+
+    // Send
+    while (true)
+    {
+        if (::send(clientSocket, sendBuffer, sizeof(sendBuffer), 0) == SOCKET_ERROR)
+        {
+            // ì›ë˜ ë¸”ë¡í–ˆì–´ì•¼ í–ˆëŠ”ë°... ë„ˆê°€ ë…¼ë¸”ë¡œí‚¹ìœ¼ë¡œ í•˜ë¼ë©°?
+            if (::WSAGetLastError() == WSAEWOULDBLOCK) {
+                Sleep(1000);
+                continue;
+            }
+
+            // Error
+            cout << "here" << endl;
+            //break; ìê¾¸ ì—¬ê¸°ì— ê±¸ë ¤ì„œ ì—ëŸ¬ë‚¬ìŒ ê·¸ëŸ°ë° ì—¬ê¸°ê°€ ì—ëŸ¬ë¶€ë¶„ì´ë¼ì„œ whileì— breakë¥¼ ê±¸ì—ˆëŠ”ë° ì—¬ê¸°ë¥¼ breakë¥¼ ì•ˆ ê±¸ì—ˆì„ë•Œ ì§„ì§œ ì—ëŸ¬ê°€ ë‚œë‹¤ë©´? í•´ê²°ë°©ë²•ì€?
+        }
+
+        cout << "Send Data! Len = " << sizeof(sendBuffer) << endl;
+
+        while (true)
+        {
+            char recvBuffer[1000];
+            int recvLen = ::recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
+            if (recvLen == SOCKET_ERROR)
+            {
+                // ì›ë˜ ë¸”ë¡í–ˆì–´ì•¼ í–ˆëŠ”ë°... ë„ˆê°€ ë…¼ë¸”ë¡œí‚¹ìœ¼ë¡œ í•˜ë¼ë©°?
+                if (::WSAGetLastError() == WSAEWOULDBLOCK)
+                    continue;
+
+                // Error
+                break;
+            }
+            else if (recvLen == 0)
+            {
+                // ì—°ê²° ëŠê¹€
+                break;
+            }
+
+            cout << "Recv Data Len = " << recvLen << endl;
+            break;
+        }
+
+        this_thread::sleep_for(1s);
+    }
+
+    // ì†Œì¼“ ë¦¬ì†ŒìŠ¤ ë°˜í™˜
+    ::closesocket(clientSocket);
+
+    // ìœˆì† ì¢…ë£Œ
+    ::WSACleanup();
 }
-
-int main() {
-	WSADATA wsaData;// À©µµ¿ì ¼ÒÄÏ ÃÊ±âÈ­ Á¤º¸ ÀúÀåÇÏ±â À§ÇÑ ±¸Á¶Ã¼ ÀÌ¹Ì ¼±¾ğµÇ¾îÀÖÀ½
-	WSAStartup(MAKEWORD(2, 2), &wsaData);//WSAStartup(¼ÒÄÏ¹öÀü, WSADATA ±¸Á¶Ã¼ ÁÖ¼Ò); ÀÎµ¥ MAKEWORD¸¦ ÅëÇØ¼­ Á¤¼ö°ªÀ¸·Î º¯È¯ÇØ¼­ ³Ö¾îÁÜ 2¹øÂ°´Â WSADATAÀÇ ±¸Á¶Ã¼ Æ÷ÀÎÅÍ Å¸ÀÔ
-
-
-
-	hSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//PF_INET IPV4Å¸ÀÔ »ç¿ë ÀÏ¹İÀûÀ¸·Î »ç¿ëÇÏ´Â ÁÖ¼Ò, SOCK_STREAM ¿¬°áÁöÇâÇü ¼ÒÄÏÀ» ¸¸µç´Ù ¼¼¹øÂ° ÀÎÀÚ protocoldms Åë½Å±Ô¾à ÇöÀç´Â IPROTO_TCP·Î TCP¸¦ »ç¿ëÇÑ´Ù´Â ¸» 0À» ³Ö°Ô µÇ¸é Ã¹ ¹øÂ° µÓ¤¤Â° ¸Å°³º¯¼ö ±âÁØÀ¸·Î ÁöÁ¤ÇØÁÜ IPROTO_HOPOPTS¿Í °°Àº ¿ªÈ°
-	if (hSocket == INVALID_SOCKET)
-		return 0;
-
-	u_long on = 1;
-	if (ioctlsocket(hSocket, FIONBIO, &on) == INVALID_SOCKET)//FIONBIOÀÇ ÀÇ¹Ì°¡ ¹«¾ùÀÎÁö
-		return 0;
-
-
-	SOCKADDR_IN tAddr = {};//À©µµ¿ì ¼ÒÄÏ¿¡¼­ ¼ÒÄÏÀ» ¿¬°áÇÒ ·ÎÄÃ ¶Ç´Â ¿ø°İ ÁÖ¼Ò ÁöÁ¤ÇÏ´Âµ¥ »ç¿ë
-	memset(&tAddr, 0, sizeof(tAddr));//ÇØ´ç ¹®±¸ÀÇ ÀÇ¹Ì°¡ ¹«¾ùÀÎÁö
-	tAddr.sin_family = AF_INET;//sin_family´Â ¹İµå½Ã AF_INETÀÌ¾î¾ßÇÔ
-	inet_pton(AF_INET, SERVER_IP, &tAddr.sin_addr);
-	//tAddr.sin_addr.s_addr = inet_addr(SERVER_IP);//ÇØ´ç ÇÔ¼ö¸¦ ´ë½ÅÇØ¼­ inet_ptonÀ» »ç¿ëÇÔ ¾ÈÁ¤¼º¹®Á¦ //IPv4 ¼Ò¼öÁ¡ ÁÖ¼Ò°¡ Æ÷ÇÔµÈ ¹®ÀÚ¿­ IN_ADDR ±¸Á¶Ã¼ÀÇ ÁÖ¼Ò·Î º¯È¯ÇÑ´Ù ÇöÀç´Â SERVER_IPÀÇ ÁÖ¼Ò¸¦ º¯È¯Áß
-	tAddr.sin_port = htons(PORT);//Æ÷Æ® ¹øÈ£ ¼³Á¤ 2¹ÙÀÌÆ® ¾È¿¡¼­ Ç¥ÇöÇÒ ¼ö ÀÖ´Â ¼ıÀÚ¿©¾ßÇÔ
-
-
-	//connect(hSocket, (SOCKADDR*)&tAddr,sizeof(tAddr));//Å¬¶óÀÌ¾ğÆ® ÃøÀº bind ´ë½Å connect »ç¿ë 
-	while (1) { //¿¬°áÀ» °è¼Ó ½ÃµµÇÏ´Â ºÎºĞ ¿¬°á ½ÇÆĞ½Ã ¹«ÇÑ·çÇÁ¸¦ µ¹¸é¼­ °è¼Ó ¿¬°áÀ» ½ÃµµÇÑ´Ù ¿¬°á ¼º°ø½Ã true¸¦ ¹İÈ¯ÇÔÀ¸·Î¼­ whileÀ» ¹ş¾î³­´Ù
-		if (!connect(hSocket, (SOCKADDR*)&tAddr, sizeof(tAddr))) {
-			if (WSAGetLastError() == WSAEWOULDBLOCK)
-				continue;
-			if (WSAGetLastError() == WSAEISCONN)
-				break;
-
-			cout << "¿¬°á½ÇÆĞ";
-			break;
-		}//connectÀÇ return °ªÀº ¼º°ø½Ã 0 ½ÇÆĞ½Ã -1ÀÌ´Ù µû¶ó¼­ ¿©±â¿¡ notÀ» ºÙÀÓÀ¸·Î¼­ ¼º°øÀº (!0)À¸·Î True°¡ µÇ°í ½ÇÆĞ´Â (!-1)·Î false¸¦ ¸¸µç´Ù
-
-
-	}
-
-	cout << "¼­¹ö¿¡ ¿¬°áÇß½À´Ï´Ù. Connected to Server" << endl;
-
-	char sendBuffer[100] = "Hello World";
-
-	while (true) {
-		if (send(hSocket, sendBuffer, sizeof(sendBuffer), 0) == SOCKET_ERROR) {
-			if (WSAGetLastError() == WSAEWOULDBLOCK) {
-				continue;
-			}
-			break;
-		}
-
-		cout << "µ¥ÀÌÅÍ Àü¼Û µ¥ÀÌÅÍ ±æÀÌ = " << sizeof(sendBuffer) << endl;
-
-		while (true) {
-			char recvBuffer[PACKET_SIZE];
-			int recvLen = recv(hSocket, recvBuffer, PACKET_SIZE,0);
-			if (recvLen == SOCKET_ERROR) {
-				if (WSAGetLastError() == WSAEWOULDBLOCK) {
-					continue;
-				}
-				break;
-			}
-			else if (recvLen == 0) {
-				cout << "¿¬°á ²÷±è" << endl;
-				break;
-			}
-
-			cout << "¼ö½ÅÇÑ µ¥ÀÌÅÍÀÇ ±æÀÌ =" << recvLen << endl;
-			break;
-		}
-
-		this_thread::sleep_for(1s);//ÇØ´ç ¹®±¸°¡ ÀÖ¾î¾ßÇÏ´Â ÀÌÀ¯ Áö±İ thread¸¦ ±¸Çö ÇÏÁö ¾Ê¾Ò´Âµ¥ ¿Ö ³Ö¾î¾ßÇÏ´Â°¡
-
-		
-		/*char cMsg[PACKET_SIZE] = {0};
-		std::thread proc1(proc_recv);//procv_recvÇÔ¼ö Á¤ÀÇÇØ¾ßÇÔ
-		//char cMsg[PACKET_SIZE] = "Client say hi";
-
-
-		while (!WSAGetLastError()) {
-			cin >> cMsg;
-			send(hSocket, cMsg, strlen(cMsg), 0);//Àü¼ÛÇÏ°íÀÚ ÇÏ´Â ¹®ÀÚÀÇ ±æÀÌ¸¸Å­
-		}proc1.join*/
-
-
-
-
-		//send(hSocket, cMsg, strlen(cMsg), 0);
-
-
-		//char cBuffer[PACKET_SIZE] = {};
-		//recv(hSocket, cBuffer, PACKET_SIZE, 0);
-		//printf("Recv Mssg : %s\n", cBuffer);
-		//std::cout<<"Recv Msg :%s<<std::endl;
-
-		closesocket(hSocket);
-
-
-		WSACleanup();//¼ÒÄÏ¿¡¼­ »ç¿ëÇÏ´Â ¼Ò¸êÀÚ
-		std::cout << "Hello World\n";
-
-		return 0;
-	}
-}
-
-// ÇÁ·Î±×·¥ ½ÇÇà: <Ctrl+F5> ¶Ç´Â [µğ¹ö±×] > [µğ¹ö±ëÇÏÁö ¾Ê°í ½ÃÀÛ] ¸Ş´º
-// ÇÁ·Î±×·¥ µğ¹ö±×: <F5> Å° ¶Ç´Â [µğ¹ö±×] > [µğ¹ö±ë ½ÃÀÛ] ¸Ş´º
-
-// ½ÃÀÛÀ» À§ÇÑ ÆÁ: 
-//   1. [¼Ö·ç¼Ç Å½»ö±â] Ã¢À» »ç¿ëÇÏ¿© ÆÄÀÏÀ» Ãß°¡/°ü¸®ÇÕ´Ï´Ù.
-//   2. [ÆÀ Å½»ö±â] Ã¢À» »ç¿ëÇÏ¿© ¼Ò½º Á¦¾î¿¡ ¿¬°áÇÕ´Ï´Ù.
-//   3. [Ãâ·Â] Ã¢À» »ç¿ëÇÏ¿© ºôµå Ãâ·Â ¹× ±âÅ¸ ¸Ş½ÃÁö¸¦ È®ÀÎÇÕ´Ï´Ù.
-//   4. [¿À·ù ¸ñ·Ï] Ã¢À» »ç¿ëÇÏ¿© ¿À·ù¸¦ º¾´Ï´Ù.
-//   5. [ÇÁ·ÎÁ§Æ®] > [»õ Ç×¸ñ Ãß°¡]·Î ÀÌµ¿ÇÏ¿© »õ ÄÚµå ÆÄÀÏÀ» ¸¸µé°Å³ª, [ÇÁ·ÎÁ§Æ®] > [±âÁ¸ Ç×¸ñ Ãß°¡]·Î ÀÌµ¿ÇÏ¿© ±âÁ¸ ÄÚµå ÆÄÀÏÀ» ÇÁ·ÎÁ§Æ®¿¡ Ãß°¡ÇÕ´Ï´Ù.
-//   6. ³ªÁß¿¡ ÀÌ ÇÁ·ÎÁ§Æ®¸¦ ´Ù½Ã ¿­·Á¸é [ÆÄÀÏ] > [¿­±â] > [ÇÁ·ÎÁ§Æ®]·Î ÀÌµ¿ÇÏ°í .sln ÆÄÀÏÀ» ¼±ÅÃÇÕ´Ï´Ù.
