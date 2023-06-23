@@ -15,6 +15,14 @@ using namespace std;
 
 SOCKET hListen, hClient;
 u_long nonBlockingMode = 1;//굳이 1이 아니더라도 괜찮음 0이면 블로킹 나머지는 논블로킹임
+
+void func1() {// 연결과 동시에 작동 되어있음
+	for (int i = 0; i < 10; i++) {
+		cout << "쓰레드 함수 작동중" << endl;
+		Sleep(1000);
+	}
+}
+
 void proc_recvs() {
 	char buff[PACKET_SIZE] = { 0 };
 	//string cmd;
@@ -51,6 +59,7 @@ int main() {
 
 	SOCKADDR_IN tClntAddr = {};
 	int iClntSize = sizeof(tClntAddr);
+	thread t1(func1);
 	while (true) {
 		hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
 		if (hClient == INVALID_SOCKET) {
@@ -91,7 +100,7 @@ int main() {
 	WSACleanup();//소켓에서 사용하는 소멸자
 
 	char cBuffer[PACKET_SIZE] = { 0 };
-	thread proc2(proc_recvs);
+	//thread proc2(proc_recvs);
 	//recv(hClient, cBuffer, PACKET_SIZE, 0);//대상 소켓으로 보내온 정보를 받아주는 역활
 	//printf("Recv Mssg : %s\n", cBuffer);
 
@@ -103,6 +112,8 @@ int main() {
 
 	//char cMsg[] = "Server Send";
 	//send(hClient, cMsg, strlen(cMsg), 0);
+
+	t1.join();
 
 	closesocket(hClient);
 	closesocket(hListen);
