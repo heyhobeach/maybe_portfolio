@@ -4,6 +4,7 @@
 #include "pch.h"
 #include <iostream>
 #include <stdint.h>
+#include <vector>
 #pragma comment(lib, "ws2_32")
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
@@ -40,6 +41,7 @@ void proc_recvs() {
 }
 
 int main() {
+	vector<string> message_log;
 	WSADATA wsaData;// 윈도우 소켓 초기화 정보 저장하기 위한 구조체 이미 선언되어있음
 	WSAStartup(MAKEWORD(2, 2), &wsaData);//WSAStartup(소켓버전, WSADATA 구조체 주소); 인데 MAKEWORD를 통해서 정수값으로 변환해서 넣어줌 2번째는 WSADATA의 구조체 포인터 타입
 
@@ -72,6 +74,7 @@ int main() {
 		while (true) {
 			char recvBuffer[1000];
 			int recvLen = recv(hClient, recvBuffer, PACKET_SIZE, 0);
+			//recv(hClient, recvBuffer, PACKET_SIZE, 0);
 			if (recvLen == SOCKET_ERROR) {
 				if (WSAGetLastError() == WSAEWOULDBLOCK) {
 					continue;//non block하기위한 부분 block되면 continue해라
@@ -82,7 +85,7 @@ int main() {
 				break;
 			}
 
-			cout << "Recv Data Len=" << recvLen << endl;
+			//cout << "Recv Data Len=" << recvLen << endl;
 
 			while (true) {
 				if (send(hClient, recvBuffer, strlen(recvBuffer), 0) == SOCKET_ERROR) {
@@ -91,7 +94,8 @@ int main() {
 					}
 					break;
 				}
-				cout << "send Data: Len" << recvLen << endl;
+				//cout << "send Data: Len" << recvLen << endl;
+				cout << "send Data :" << recvBuffer << endl;
 				break;
 			}
 		}

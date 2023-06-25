@@ -16,25 +16,37 @@
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
 #define PACKET_SIZE 1024
-#define SERVER_IP "172.20.10.3"//"192.168.219.109"// 서버의 ip로 맞춰줘야함
+#define SERVER_IP "192.168.219.100"// 서버의 ip로 맞춰줘야함
 
 #pragma once
 
 using namespace std;
 
-void send_input() {
-    char buff[PACKET_SIZE] = { 0 };
-    string message;
-    while (!WSAGetLastError()) {
-        cout << "스레드와 소켓 연결 성공" << endl;
-        Sleep(1000);
-    }
+
+
+void send_input(string text, int& num, SOCKET& socket) {//cin에서 메세지 보낼걸 굳이 포인터로 접근해야할까?
+     char buff[PACKET_SIZE] = {0};
+     string message;
+     string strNum;
+     while (!WSAGetLastError()) {
+         //cout << "스레드와 소켓 연결 성공" << endl;
+         cin >> buff;
+         //cout << text << endl;
+         //num++;
+         //strNum = static_cast <string> (strNum);
+         //text += strNum;
+         //cout << text << " roof : " << num++ << endl;
+         send(socket,buff,sizeof(buff), 0);
+
+         Sleep(1000);
+     }
 }
 
 
 int main()
 {
     WSAData wsaData;
+    int testNum = 0;
     if (::WSAStartup(MAKEWORD(2, 2), &wsaData))
         return 0;
 
@@ -52,7 +64,7 @@ int main()
     ::inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr);
     serverAddr.sin_port = ::htons(PORT);
 
-    thread t1(send_input);
+    thread t1(send_input, "hello", ref(testNum), ref(clientSocket));//레퍼런스로 전달하려면 ref 함수로 감싸야함
 
     // Connect
     while (true)
@@ -85,7 +97,7 @@ int main()
         {
             // 원래 블록했어야 했는데... 너가 논블로킹으로 하라며?
             if (::WSAGetLastError() == WSAEWOULDBLOCK) {
-                Sleep(1000);
+                //Sleep(1000);
                 continue;
             }
 
@@ -94,7 +106,7 @@ int main()
             //break; //자꾸 여기에 걸려서 에러났음 그런데 여기가 에러부분이라서 while에 break를 걸었는데 여기를 break를 안 걸었을때 진짜 에러가 난다면? 해결방법은?
         }
 
-        cout << "Send Data! Len = " << sizeof(sendBuffer) << endl;
+        //cout << "Send Data! Len = " << sizeof(sendBuffer) << endl;
 
         while (true)
         {
@@ -120,7 +132,7 @@ int main()
             cout << "Recv Data Len = " << recvLen << endl;
             break;
         }
-
+        //cout << "check num" << testNum << endl;
         this_thread::sleep_for(1s);
     }
     t1.join();
