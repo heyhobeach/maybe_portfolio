@@ -1,4 +1,4 @@
-﻿// testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
+// testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
 //
 
 #include "pch.h"
@@ -45,6 +45,10 @@ int main() {
 	WSADATA wsaData;// 윈도우 소켓 초기화 정보 저장하기 위한 구조체 이미 선언되어있음
 	WSAStartup(MAKEWORD(2, 2), &wsaData);//WSAStartup(소켓버전, WSADATA 구조체 주소); 인데 MAKEWORD를 통해서 정수값으로 변환해서 넣어줌 2번째는 WSADATA의 구조체 포인터 타입
 
+	//vector<int> ip_vec;
+	
+	int ip_addr = 0;
+
 	//SOCKET hListen;
 	hListen = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);//PF_INET IPV4타입 사용 일반적으로 사용하는 주소, SOCK_STREAM 연결지향형 소켓을 만든다 세번째 인자 protocoldms 통신규약 현재는 IPROTO_TCP로 TCP를 사용한다느 말
 	if (ioctlsocket(hListen, FIONBIO, &nonBlockingMode) == INVALID_SOCKET) {//SOCKET socket 실패시 INVALD_SOCKET 리턴 즉 ioctlsocket
@@ -52,6 +56,7 @@ int main() {
 	}
 
 	SOCKADDR_IN tListenAddr = {};//윈도우 소켓에서 소켓을 연결할 로컬 또는 원격 주소 지정하는데 사용
+	SOCKADDR_IN myaddr;
 	tListenAddr.sin_family = AF_INET;//sin_family는 반드시 AF_INET이어야함
 	tListenAddr.sin_port = htons(PORT);//포트 번호 설정 2바이트 안에서 표현할 수 있는 숫자여야함
 	tListenAddr.sin_addr.s_addr = htonl(INADDR_ANY);//현재 동작되는 컴퓨터의 IP주소 INADDR_ANY면 현재 동작되는 컴퓨터의 IP주소 s.addr은IPv4 internet address의미
@@ -62,14 +67,19 @@ int main() {
 	SOCKADDR_IN tClntAddr = {};
 	int iClntSize = sizeof(tClntAddr);
 	thread t1(func1);
+
+	
+
 	while (true) {
 		hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
+
+		//ip_addr = getpeername(hClient, (SOCKADDR*)&myaddr, &iClntSize);//이걸 넣으면 지금 자꾸 함수가 그냥 종료됨
 		if (hClient == INVALID_SOCKET) {
 			if (WSAGetLastError() == WSAEWOULDBLOCK)
 				continue;//non block하기위한 부분 block되면 continue해라
 			break;//block도 아니고 소켓 생성 실패하면 break
 		}
-		cout << "Client Connected" << endl;
+		cout << "Client Connected" <<inet_ntoa(tClntAddr.sin_addr) << endl;//inet_ntoa도 ip주소를 받아오는데 해당 함수가 getpeername과 차이는?
 		//recv 부분
 		while (true) {
 			char recvBuffer[1000];
