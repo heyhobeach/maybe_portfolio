@@ -1,5 +1,5 @@
 // testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
-//
+//현재 서버에서 길게 입력을 못 받고 있음
 
 #include "pch.h"
 #include <iostream>
@@ -8,7 +8,7 @@
 #pragma comment(lib, "ws2_32")
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
-#define PACKET_SIZE 1024
+#define PACKET_SIZE 10000
 
 #pragma once
 
@@ -46,7 +46,7 @@ int main() {
 	WSAStartup(MAKEWORD(2, 2), &wsaData);//WSAStartup(소켓버전, WSADATA 구조체 주소); 인데 MAKEWORD를 통해서 정수값으로 변환해서 넣어줌 2번째는 WSADATA의 구조체 포인터 타입
 
 	//vector<int> ip_vec;
-	
+
 	int ip_addr = 0;
 
 	//SOCKET hListen;
@@ -68,7 +68,7 @@ int main() {
 	int iClntSize = sizeof(tClntAddr);
 	thread t1(func1);
 
-	
+
 
 	while (true) {
 		hClient = accept(hListen, (SOCKADDR*)&tClntAddr, &iClntSize);//accept(소켓, 소켓 구성요소 구조체 주소,그 구조체를 담고있는 별수 크기
@@ -79,10 +79,10 @@ int main() {
 				continue;//non block하기위한 부분 block되면 continue해라
 			break;//block도 아니고 소켓 생성 실패하면 break
 		}
-		cout << "Client Connected" <<inet_ntoa(tClntAddr.sin_addr) << endl;//inet_ntoa도 ip주소를 받아오는데 해당 함수가 getpeername과 차이는?
+		cout << "Client Connected" << inet_ntoa(tClntAddr.sin_addr) << endl;//inet_ntoa도 ip주소를 받아오는데 해당 함수가 getpeername과 차이는?
 		//recv 부분
 		while (true) {
-			char recvBuffer[1000];
+			char recvBuffer[10000];
 			int recvLen = recv(hClient, recvBuffer, PACKET_SIZE, 0);
 			//recv(hClient, recvBuffer, PACKET_SIZE, 0);
 			if (recvLen == SOCKET_ERROR) {
