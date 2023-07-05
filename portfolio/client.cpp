@@ -16,7 +16,7 @@
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
 #define PACKET_SIZE 1024
-#define SERVER_IP "192.168.219.100"// 서버의 ip로 맞춰줘야함
+#define SERVER_IP "192.168.219.107"// 서버의 ip로 맞춰줘야함//"192.168.219.100"
 
 #pragma once
 
@@ -24,22 +24,29 @@ using namespace std;
 
 
 
-void send_input(string text, int& num, SOCKET& socket) {//cin에서 메세지 보낼걸 굳이 포인터로 접근해야할까?
-     char buff[PACKET_SIZE] = {0};
-     string message;
-     string strNum;
-     while (!WSAGetLastError()) {
-         //cout << "스레드와 소켓 연결 성공" << endl;
-         cin >> buff;
-         //cout << text << endl;
-         //num++;
-         //strNum = static_cast <string> (strNum);
-         //text += strNum;
-         //cout << text << " roof : " << num++ << endl;
-         send(socket,buff,sizeof(buff), 0);
+void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 보낼걸 굳이 포인터로 접근해야할까?
+    char buff[PACKET_SIZE] = { 0 };
+    string message = "";
+    string strNum;
+    const char* cmessage;
+    while (!WSAGetLastError()) {
+        //cout << "스레드와 소켓 연결 성공" << endl;
+        cin >> buff;
+        message = "사용자>>" + name + buff;
+        cmessage = message.c_str();
+        cout << sizeof(name) << endl << sizeof(buff) << endl;
+        cout << sizeof(message) << endl;
+        cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
+        cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
+        //cout << text << endl;
+        //num++;
+        //strNum = static_cast <string> (strNum);
+        //text += strNum;
+        //cout << text << " roof : " << num++ << endl;
+        send(socket, cmessage, 1000, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함
 
-         Sleep(1000);
-     }
+        Sleep(1000);
+    }
 }
 
 
@@ -57,14 +64,15 @@ int main()
     u_long on = 1;
     if (::ioctlsocket(clientSocket, FIONBIO, &on) == INVALID_SOCKET)
         return 0;
-
+    string name = "";
     SOCKADDR_IN serverAddr;
     ::memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
     ::inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr);
     serverAddr.sin_port = ::htons(PORT);
+    cin >> name;
 
-    thread t1(send_input, "hello", ref(testNum), ref(clientSocket));//레퍼런스로 전달하려면 ref 함수로 감싸야함
+    thread t1(send_input, name, ref(testNum), ref(clientSocket));//레퍼런스로 전달하려면 ref 함수로 감싸야함
 
     // Connect
     while (true)
@@ -91,7 +99,7 @@ int main()
     char sendBuffer[100] = "Hello World";
 
     // Send
-    while (true)
+    /*while (true)
     {
         if (::send(clientSocket, sendBuffer, sizeof(sendBuffer), 0) == SOCKET_ERROR)
         {
@@ -129,12 +137,12 @@ int main()
                 break;
             }
 
-            cout << "Recv Data Len = " << recvLen << endl;
+            //cout << "Recv Data Len = " << recvLen << endl;
             break;
         }
         //cout << "check num" << testNum << endl;
         this_thread::sleep_for(1s);
-    }
+    }*/
     t1.join();
     // 소켓 리소스 반환
     ::closesocket(clientSocket);
