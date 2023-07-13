@@ -10,13 +10,14 @@
 #include <WS2tcpip.h>
 #include <windows.h>
 #include <thread>
+#include <string>
 
 
 #pragma comment(lib, "ws2_32")
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
 #define PACKET_SIZE 1024
-#define SERVER_IP "192.168.219.107"// 서버의 ip로 맞춰줘야함//"192.168.219.100"
+#define SERVER_IP "192.168.219.106"// 서버의 ip로 맞춰줘야함//"192.168.219.100"
 
 #pragma once
 
@@ -31,19 +32,23 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
     const char* cmessage;
     while (!WSAGetLastError()) {
         //cout << "스레드와 소켓 연결 성공" << endl;
-        cin >> buff;
-        message = "사용자>>" + name + buff;
+        //cin >> buff;
+        getline(cin, message);//공백 포함 입력 받는 과정 string 라이브러리에 들어있음
+        //cin >> message;
+        message = "사용자>>" + name + message;
+        //cmessage = ""; 필요없는 부분 위에서 어차피 새로 초이화 하면서 넣기때문
         cmessage = message.c_str();
         cout << sizeof(name) << endl << sizeof(buff) << endl;
         cout << sizeof(message) << endl;
         cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
+        cout << "message 길이" <<strlen(cmessage)<< endl;
         cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
         //cout << text << endl;
         //num++;
         //strNum = static_cast <string> (strNum);
         //text += strNum;
         //cout << text << " roof : " << num++ << endl;
-        send(socket, cmessage, 1000, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함
+        send(socket, cmessage, strlen(cmessage)+1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
 
         Sleep(1000);
     }
