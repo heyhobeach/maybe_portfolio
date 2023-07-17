@@ -11,7 +11,8 @@
 #include <windows.h>
 #include <thread>
 #include <string>
-
+#include <chrono>//c++20기준
+#include<format>
 
 #pragma comment(lib, "ws2_32")
 
@@ -22,7 +23,7 @@
 #pragma once
 
 using namespace std;
-
+using namespace std::chrono;
 
 
 void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 보낼걸 굳이 포인터로 접근해야할까?
@@ -34,7 +35,15 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
         //cout << "스레드와 소켓 연결 성공" << endl;
         //cin >> buff;
         getline(cin, message);//공백 포함 입력 받는 과정 string 라이브러리에 들어있음
+        const local_time<system_clock::duration> local_now = zoned_time{ current_zone(), system_clock::now() }.get_local_time();//로컬 시간
+        //const time_point<std::chrono::system_clock, std::chrono::days> dp = std::chrono::floor<std::chrono::days>(local_now);//pratice 프로젝트에서 확인
+        //std::chrono::year_month_day ymd{dp};
+        //seconds local_sec = duration_cast<seconds>(local_now).count();
         //cin >> message;
+
+        string s=format("{}")
+        //string s= std::format("{:%Y%m%d%H%M}", local_now);
+        //message = s + "사용자>>" + name + message;
         message = "사용자>>" + name + message;
         //cmessage = ""; 필요없는 부분 위에서 어차피 새로 초이화 하면서 넣기때문
         cmessage = message.c_str();
@@ -42,6 +51,8 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
         cout << sizeof(message) << endl;
         cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
         cout << "message 길이" <<strlen(cmessage)<< endl;
+        //cout << local_now;
+        cout << " - ";
         cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
         //cout << text << endl;
         //num++;
