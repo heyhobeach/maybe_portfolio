@@ -31,37 +31,36 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
     string message = "";
     string strNum;
     const char* cmessage;
+    
     while (!WSAGetLastError()) {
-        //cout << "스레드와 소켓 연결 성공" << endl;
-        //cin >> buff;
         getline(cin, message);//공백 포함 입력 받는 과정 string 라이브러리에 들어있음
         const local_time<system_clock::duration> local_now = zoned_time{ current_zone(), system_clock::now() }.get_local_time();//로컬 시간
-        //const time_point<std::chrono::system_clock, std::chrono::days> dp = std::chrono::floor<std::chrono::days>(local_now);//pratice 프로젝트에서 확인
+        const time_point<std::chrono::local_t, std::chrono::days> dp = std::chrono::floor<std::chrono::days>(local_now);//pratice 프로젝트에서 확인
+
+        chrono::year_month_day ymd{dp};
+        chrono::hh_mm_ss time{std::chrono::floor< std::chrono::seconds>(local_now - dp)};
         //std::chrono::year_month_day ymd{dp};
         //seconds local_sec = duration_cast<seconds>(local_now).count();
-        //cin >> message;
 
-        string s=format("{}")
-        //string s= std::format("{:%Y%m%d%H%M}", local_now);
-        //message = s + "사용자>>" + name + message;
-        message = "사용자>>" + name + message;
-        //cmessage = ""; 필요없는 부분 위에서 어차피 새로 초이화 하면서 넣기때문
+        //string s = format("{}", 10);
+
+
+        
+
+        string s = format("{:%Y년 %m월 %d일}", local_now);
+        string sec = format("{:%H: %M :%S}",time);
+        cout << sec << endl;
+        message =  s+sec+"//  사용자>>" + name + message;
         cmessage = message.c_str();
         cout << sizeof(name) << endl << sizeof(buff) << endl;
         cout << sizeof(message) << endl;
         cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
         cout << "message 길이" <<strlen(cmessage)<< endl;
-        //cout << local_now;
-        cout << " - ";
+        cout<<s<< " - ";
         cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
-        //cout << text << endl;
-        //num++;
-        //strNum = static_cast <string> (strNum);
-        //text += strNum;
-        //cout << text << " roof : " << num++ << endl;
         send(socket, cmessage, strlen(cmessage)+1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
 
-        Sleep(1000);
+        //Sleep(1000);
     }
 }
 
@@ -86,6 +85,8 @@ int main()
     serverAddr.sin_family = AF_INET;
     ::inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr);
     serverAddr.sin_port = ::htons(PORT);
+    Sleep(1000);
+    cout << "사용자 이름 입력 >>";
     cin >> name;
 
     thread t1(send_input, name, ref(testNum), ref(clientSocket));//레퍼런스로 전달하려면 ref 함수로 감싸야함
@@ -98,6 +99,7 @@ int main()
         {
             // 원래 블록했어야 했는데 ... 너가 논블로킹으로 하라며?
             if (::WSAGetLastError() == WSAEWOULDBLOCK)
+                cout << "non blocking test";
                 continue;
 
             if (::WSAGetLastError() == WSAEISCONN) {
@@ -106,6 +108,8 @@ int main()
             }
 
             // Error
+
+            cout << "error 부분";
             break;
         }
     }
@@ -114,51 +118,6 @@ int main()
 
     char sendBuffer[100] = "Hello World";
 
-    // Send
-    /*while (true)
-    {
-        if (::send(clientSocket, sendBuffer, sizeof(sendBuffer), 0) == SOCKET_ERROR)
-        {
-            // 원래 블록했어야 했는데... 너가 논블로킹으로 하라며?
-            if (::WSAGetLastError() == WSAEWOULDBLOCK) {
-                //Sleep(1000);
-                continue;
-            }
-
-            // Error
-            cout << "send fail" << endl;// 전송하는 부분인데 현재 서버와 연결이 되어있지 않은 상태라서 연결 실패
-            //break; //자꾸 여기에 걸려서 에러났음 그런데 여기가 에러부분이라서 while에 break를 걸었는데 여기를 break를 안 걸었을때 진짜 에러가 난다면? 해결방법은?
-        }
-
-        //cout << "Send Data! Len = " << sizeof(sendBuffer) << endl;
-
-        while (true)
-        {
-            char recvBuffer[1000];
-            int recvLen = ::recv(clientSocket, recvBuffer, sizeof(recvBuffer), 0);
-            if (recvLen == SOCKET_ERROR)
-            {
-                // 원래 블록했어야 했는데... 너가 논블로킹으로 하라며?
-                if (::WSAGetLastError() == WSAEWOULDBLOCK)
-                    continue;
-
-                // Error
-                cout << "disconnect" << endl;//현재 이 지점이 서버와 연결이 안 되어서 recv를 하지 못 하는 부분
-                break;
-            }
-            else if (recvLen == 0)
-            {
-                // 연결 끊김
-
-                break;
-            }
-
-            //cout << "Recv Data Len = " << recvLen << endl;
-            break;
-        }
-        //cout << "check num" << testNum << endl;
-        this_thread::sleep_for(1s);
-    }*/
     t1.join();
     // 소켓 리소스 반환
     ::closesocket(clientSocket);
