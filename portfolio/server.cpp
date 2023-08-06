@@ -41,7 +41,8 @@ void func1() {// 연결과 동시에 작동 되어있음
 	while (!WSAGetLastError()) {
 		cout << "연결성공\n";
 		ZeroMemory(&buff, PACKET_SIZE);//ZeroMemory는 함수가 아닌 매크로
-		//ioctlsocket(hClient, FIONBIO, &nonBlockingMode);
+		//
+		ctlsocket(hClient, FIONBIO, &nonBlockingMode);
 		recv(hClient, buff, PACKET_SIZE, 0);//flag 0로 일반 데이터 수신
 		//소캣으로 연결하고 buff에 전달받은 데이터 저장, PACKET_SIZE는 읽을 데이터의 크기
 		cout << "client로부터 받은 메세지 : " << buff << endl;
@@ -88,7 +89,6 @@ int main() {
 		//ip_addr = getpeername(hClient, (SOCKADDR*)&myaddr, &iClntSize);//이걸 넣으면 지금 자꾸 함수가 그냥 종료됨
 		if (hClient == INVALID_SOCKET) {
 			if (WSAGetLastError() == WSAEWOULDBLOCK) {
-				//cout << "non block" << endl;
 				continue;//non block하기위한 부분 block되면 continue해라
 			}
 			break;//block도 아니고 소켓 생성 실패하면 break
@@ -101,10 +101,11 @@ int main() {
 		//recv 부분
 		while (true) {
 			char recvBuffer[1000];
-			int recvLen = recv(hClient, recvBuffer, PACKET_SIZE, 0);
+			//int recvLen = recv(hClient, recvBuffer, PACKET_SIZE, 0);//그냥 원래의 코드 문자열을 전송받음
 			//recv(hClient, (char*)&rinfo, sizeof(rinfo), 0);
 			//username = ntohl(rinfo.name);
 			//year = ntohl(rinfo.year);
+			int recvLen = recv(hClient, (char*)&rinfo, sizeof(rinfo), 0);//구조체 정보를 전송받음
 			
 			if (recvLen == SOCKET_ERROR) {
 				if (WSAGetLastError() == WSAEWOULDBLOCK) {
@@ -126,7 +127,7 @@ int main() {
 					break;
 				}
 				//cout << "send Data: Len" << recvLen << endl;
-				cout << "send Data :" << recvBuffer << endl;
+				cout << "send Data :" << rinfo.content << endl;
 				//cout << year<< endl;
 				break;
 			}
