@@ -1,4 +1,4 @@
-﻿
+
 // testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
 // 여기서 실시간 채팅 프로그램으로 바꿔야함 연결이 끊긴 후 다시 연결 했을때 연결 가능함 다만 지금은 고정된 메시지만 보내고 있는데 여기서 채팅이 가능하도록 수정해야함
 //실행되는코드 쓰레드 사용?
@@ -26,12 +26,39 @@ using namespace std;
 using namespace std::chrono;
 
 
+struct Info {//server와 client두개가 같아야함
+    string name;
+    string content;
+    int year;
+    int month;
+    int day;
+};
+
+void setInfo(Info *info,string name, string content, int year, int month, int day) {
+    info->name = name;
+    info->content = content;
+    info->year = year;
+    info->month = month;
+    info->day = day;
+}
+
+void printInfo(Info *info) {
+    cout << "name :" << info->name << endl;
+    cout << "content :" << info->content << endl;
+    cout << "year :" << info->year << endl;
+    cout << "month :" << info->month << endl;
+    cout << "day :" << info->day << endl;
+}
+
+
 void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 보낼걸 굳이 포인터로 접근해야할까?
     char buff[PACKET_SIZE] = { 0 };
     string message = "";
     string strNum;
     const char* cmessage;
-    
+    Info userInfo;
+    int infosize = 0;
+    unsigned char InfoBuffer[sizeof(Info)];
     while (!WSAGetLastError()) {
         getline(cin, message);//공백 포함 입력 받는 과정 string 라이브러리에 들어있음
         const local_time<system_clock::duration> local_now = zoned_time{ current_zone(), system_clock::now() }.get_local_time();//로컬 시간
@@ -49,21 +76,78 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
 
         string s = format("{:%Y년 %m월 %d일}", local_now);
         string sec = format("{:%H: %M :%S}",time);
+        //cout << "year is :" << ymd.year() << endl;
+        setInfo(&userInfo, name, message, static_cast<int>(ymd.year()), static_cast<unsigned int>(ymd.month()), static_cast<unsigned int>(ymd.day()));//구조체에 현재 사용자 이름, 내용, 년, 월, 일 입력
+        memcpy(InfoBuffer, &userInfo, sizeof(Info));//InfoBuffer에 userInfo 메모리를 복사 하는 과정
+        printInfo(&userInfo);// 구조체에 메세지 들어갔는지 확인하는 print문
         cout << sec << endl;
         message =  s+sec+"//  사용자>>" + name + message;
         cmessage = message.c_str();
-        cout << sizeof(name) << endl << sizeof(buff) << endl;
-        cout << sizeof(message) << endl;
+        //cout << sizeof(name) << endl << sizeof(buff) << endl;
+        //cout << sizeof(message) << endl;
+        
         cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
         cout << "message 길이" <<strlen(cmessage)<< endl;
         cout<<s<< " - ";
         cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
         send(socket, cmessage, strlen(cmessage)+1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
+        infosize = sizeof(userInfo);
+        //cout << userInfo.year << endl; 구조체에 year은 잘 저장되어있는상태
+        //send(socket, (char*)&userInfo,infosize,0 );
+        //send(socket,)
+        
 
         //Sleep(1000);
     }
 }
 
+
+void sendstruc(string name, int& num, SOCKET& socket) {
+    char buff[PACKET_SIZE] = { 0 };
+    string message = "";
+    string strNum;
+    const char* cmessage;
+    Info userInfo;
+    unsigned char InfoBuffer[sizeof(Info)];
+    while (!WSAGetLastError()) {
+        getline(cin, message);//공백 포함 입력 받는 과정 string 라이브러리에 들어있음
+        const local_time<system_clock::duration> local_now = zoned_time{ current_zone(), system_clock::now() }.get_local_time();//로컬 시간
+        const time_point<std::chrono::local_t, std::chrono::days> dp = std::chrono::floor<std::chrono::days>(local_now);//pratice 프로젝트에서 확인
+
+        chrono::year_month_day ymd{dp};
+        chrono::hh_mm_ss time{std::chrono::floor< std::chrono::seconds>(local_now - dp)};
+        //std::chrono::year_month_day ymd{dp};
+        //seconds local_sec = duration_cast<seconds>(local_now).count();
+
+        //string s = format("{}", 10);
+
+
+
+
+        string s = format("{:%Y년 %m월 %d일}", local_now);
+        string sec = format("{:%H: %M :%S}", time);
+        //cout << "year is :" << ymd.year() << endl;
+        setInfo(&userInfo, name, message, static_cast<int>(ymd.year()), static_cast<unsigned int>(ymd.month()), static_cast<unsigned int>(ymd.day()));//구조체에 현재 사용자 이름, 내용, 년, 월, 일 입력
+        memcpy(InfoBuffer, &userInfo, sizeof(Info));//InfoBuffer에 userInfo 메모리를 복사 하는 과정
+        printInfo(&userInfo);// 구조체에 메세지 들어갔는지 확인하는 print문
+        cout << sec << endl;
+        message = s + sec + "//  사용자>>" + name + message;
+        cmessage = message.c_str();
+        //cout << sizeof(name) << endl << sizeof(buff) << endl;
+        //cout << sizeof(message) << endl;
+
+        cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
+        cout << "message 길이" << strlen(cmessage) << endl;
+        cout << s << " - ";
+        cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
+        send(socket, cmessage, strlen(cmessage) + 1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
+        //send(socket,)
+
+
+        //Sleep(1000);
+    }
+
+}
 
 int main()
 {
@@ -99,7 +183,7 @@ int main()
         {
             // 원래 블록했어야 했는데 ... 너가 논블로킹으로 하라며?
             if (::WSAGetLastError() == WSAEWOULDBLOCK)
-                cout << "non blocking test";
+                cout << "non blocking test";//연결 안 될경우 계속 해당 메시지 출력
                 continue;
 
             if (::WSAGetLastError() == WSAEISCONN) {
