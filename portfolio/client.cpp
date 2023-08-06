@@ -34,7 +34,7 @@ struct Info {//server와 client두개가 같아야함
     int day;
 };
 
-void setInfo(Info *info,string name, string content, int year, int month, int day) {
+void setInfo(Info* info, string name, string content, int year, int month, int day) {
     info->name = name;
     info->content = content;
     info->year = year;
@@ -42,7 +42,7 @@ void setInfo(Info *info,string name, string content, int year, int month, int da
     info->day = day;
 }
 
-void printInfo(Info *info) {
+void printInfo(Info* info) {
     cout << "name :" << info->name << endl;
     cout << "content :" << info->content << endl;
     cout << "year :" << info->year << endl;
@@ -72,30 +72,30 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
         //string s = format("{}", 10);
 
 
-        
+
 
         string s = format("{:%Y년 %m월 %d일}", local_now);
-        string sec = format("{:%H: %M :%S}",time);
+        string sec = format("{:%H: %M :%S}", time);
         //cout << "year is :" << ymd.year() << endl;
         setInfo(&userInfo, name, message, static_cast<int>(ymd.year()), static_cast<unsigned int>(ymd.month()), static_cast<unsigned int>(ymd.day()));//구조체에 현재 사용자 이름, 내용, 년, 월, 일 입력
         memcpy(InfoBuffer, &userInfo, sizeof(Info));//InfoBuffer에 userInfo 메모리를 복사 하는 과정
         printInfo(&userInfo);// 구조체에 메세지 들어갔는지 확인하는 print문
         cout << sec << endl;
-        message =  s+sec+"//  사용자>>" + name + message;
+        message = s + sec + "//  사용자>>" + name + message;
         cmessage = message.c_str();
         //cout << sizeof(name) << endl << sizeof(buff) << endl;
         //cout << sizeof(message) << endl;
-        
+
         cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
-        cout << "message 길이" <<strlen(cmessage)<< endl;
-        cout<<s<< " - ";
+        cout << "message 길이" << strlen(cmessage) << endl;
+        cout << s << " - ";
         cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
-        send(socket, cmessage, strlen(cmessage)+1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
-        infosize = sizeof(userInfo);
+        //send(socket, cmessage, strlen(cmessage) + 1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
+        infosize = sizeof(userInfo);    
         //cout << userInfo.year << endl; 구조체에 year은 잘 저장되어있는상태
-        //send(socket, (char*)&userInfo,infosize,0 );
+        send(socket, (char*)&userInfo,infosize,0 );
         //send(socket,)
-        
+
 
         //Sleep(1000);
     }
@@ -184,7 +184,7 @@ int main()
             // 원래 블록했어야 했는데 ... 너가 논블로킹으로 하라며?
             if (::WSAGetLastError() == WSAEWOULDBLOCK)
                 cout << "non blocking test";//연결 안 될경우 계속 해당 메시지 출력
-                continue;
+            continue;
 
             if (::WSAGetLastError() == WSAEISCONN) {
                 cout << "여기에 걸림" << endl;
