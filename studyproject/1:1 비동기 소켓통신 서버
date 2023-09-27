@@ -1,0 +1,108 @@
+// serverproject.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
+// 서버
+
+#include "pch.h"
+#include <iostream>
+#include <vector>
+#include <Windows.h>
+
+
+#pragma comment(lib,"ws2_32.lib")//해당 줄이 없으면 프로젝트에 라인 추가 해야함
+using namespace std;
+
+#define PACKET_SIZE 1024
+SOCKET hListen, client_sock;
+
+struct cal_data {
+    int left_num;
+    int right_num;
+    char op;
+    int result;
+    short int error;
+    char text[1024];
+};
+
+std::vector<char> SerializeMyData(const cal_data& data) {
+    std::vector<char> buffer(sizeof(data));
+    memcpy(buffer.data(), &data, sizeof(data));
+    return buffer;
+}
+
+cal_data DeserializeMyData(const std::vector<char>& buffer) {
+    cal_data data;
+    memcpy(&data, buffer.data(), sizeof(data));
+    return data;
+}
+
+
+int main()
+{
+    WSADATA wsa;
+    WSAStartup(MAKEWORD(2, 2), &wsa);
+
+    hListen = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+    SOCKADDR_IN addr = {};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(4444);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    struct cal_data rdata;
+    short int cal_result;
+
+    bind(hListen, (SOCKADDR*)&addr, sizeof(addr));
+ 
+    listen(hListen, SOMAXCONN);
+
+    int left_num, right_num;
+    int recv_len;
+
+
+
+    SOCKADDR_IN client = {};
+    int client_size = sizeof(client);
+    ZeroMemory(&client, client_size);
+    cout << "대기중" << endl;
+    client_sock = accept(hListen, (SOCKADDR*)&client, &client_size);
+    cout << "연결완" << endl;
+    cout << "test" << endl;
+    Sleep(1000);
+
+
+    if (client_sock == -1) {//클라이언트 연결확인
+        cout << "error" << endl;
+        return 0;
+    }
+    else {
+        cout << "connect" << endl;
+    }
+    Sleep(1000);
+
+
+    while (true) {
+        vector<char> receivedData(sizeof(cal_data));
+        recv(client_sock, receivedData.data(), receivedData.size(), 0);
+
+        rdata = DeserializeMyData(receivedData);
+        cout << "left " << rdata.left_num <<endl<< "right " << rdata.right_num<<endl << "name " << rdata.op << endl;
+
+
+    }
+    
+
+    closesocket(client_sock);
+    closesocket(hListen);
+    WSACleanup();
+    std::cout << "Hello server!\n";
+}
+
+// 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
+// 프로그램 디버그: <F5> 키 또는 [디버그] > [디버깅 시작] 메뉴
+
+// 시작을 위한 팁: 
+//   1. [솔루션 탐색기] 창을 사용하여 파일을 추가/관리합니다.
+//   2. [팀 탐색기] 창을 사용하여 소스 제어에 연결합니다.
+//   3. [출력] 창을 사용하여 빌드 출력 및 기타 메시지를 확인합니다.
+//   4. [오류 목록] 창을 사용하여 오류를 봅니다.
+//   5. [프로젝트] > [새 항목 추가]로 이동하여 새 코드 파일을 만들거나, [프로젝트] > [기존 항목 추가]로 이동하여 기존 코드 파일을 프로젝트에 추가합니다.
+//   6. 나중에 이 프로젝트를 다시 열려면 [파일] > [열기] > [프로젝트]로 이동하고 .sln 파일을 선택합니다.
