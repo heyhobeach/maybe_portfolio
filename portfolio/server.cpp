@@ -1,5 +1,5 @@
 // testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
-//
+//server
 
 
 #include "pch.h"
@@ -7,6 +7,12 @@
 #include <stdint.h>
 #include <vector>
 #include<WS2tcpip.h>
+#include<sstream>
+//#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+//#include <boost/serialization/string.hpp>
+
+
 #pragma comment(lib, "ws2_32")
 
 #define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
@@ -22,9 +28,19 @@ u_long nonBlockingMode = 1;//굳이 1이 아니더라도 괜찮음 0이면 블�
 struct Info {//server와 client두개가 같아야함
 	string name;
 	string content;
+	string teststr;
 	int year;
 	int month;
 	int day;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int version) {
+		ar& name;
+		ar& content;
+		ar& teststr;
+		ar& year;
+		ar& month;
+		ar& day;
+	}
 };
 
 void func1() {// 연결과 동시에 작동 되어있음
@@ -34,25 +50,17 @@ void func1() {// 연결과 동시에 작동 되어있음
 	}
 }
 
-/*void proc_recvs() { // 해당함수 사용 안 하는중
-	char buff[PACKET_SIZE] = { 0 };
-	//string cmd;
+void printInfo(Info* info) {
+	cout << "name :" << info->name << endl;
+	cout << "content :" << info->content << endl;
+	cout << "year :" << info->year << endl;
+	cout << "month :" << info->month << endl;
+	cout << "day :" << info->day << endl;
+}
 
-	while (!WSAGetLastError()) {
-		cout << "연결성공\n";
-		ZeroMemory(&buff, PACKET_SIZE);//ZeroMemory는 함수가 아닌 매크로
-		//
-		ctlsocket(hClient, FIONBIO, &nonBlockingMode);
-		recv(hClient, buff, PACKET_SIZE, 0);//flag 0로 일반 데이터 수신
-		//소캣으로 연결하고 buff에 전달받은 데이터 저장, PACKET_SIZE는 읽을 데이터의 크기
-		cout << "client로부터 받은 메세지 : " << buff << endl;
-	}
-	cout << "연결 종료";
-
-}*/
 
 int main() {
-	vector<string> message_log;
+	vector<string> message_log;//현재는 사용하지 않는 상태
 	WSADATA wsaData;// 윈도우 소켓 초기화 정보 저장하기 위한 구조체 이미 선언되어있음
 	WSAStartup(MAKEWORD(2, 2), &wsaData);//WSAStartup(소켓버전, WSADATA 구조체 주소); 인데 MAKEWORD를 통해서 정수값으로 변환해서 넣어줌 2번째는 WSADATA의 구조체 포인터 타입
 
@@ -79,7 +87,7 @@ int main() {
 
 	SOCKADDR_IN tClntAddr = {};
 	int iClntSize = sizeof(tClntAddr);
-	thread t1(func1);
+	//thread t1(func1);
 
 
 
@@ -88,25 +96,27 @@ int main() {
 
 		//ip_addr = getpeername(hClient, (SOCKADDR*)&myaddr, &iClntSize);//이걸 넣으면 지금 자꾸 함수가 그냥 종료됨
 		if (hClient == INVALID_SOCKET) {
-			if (WSAGetLastError() == WSAEWOULDBLOCK) {
-				continue;//non block하기위한 부분 block되면 continue해라
-			}
-			break;//block도 아니고 소켓 생성 실패하면 break
+			//if (WSAGetLastError() == WSAEWOULDBLOCK) {
+			//	continue;//non block하기위한 부분 block되면 continue해라
+			//}
+			//break;//block도 아니고 소켓 생성 실패하면 break
+			cout << "소켓 생성 실패" << endl;
+			return 1;
 		}
 		char clientIP[20] = { 0 };
-		if (inet_ntop(AF_INET, &tListenAddr.sin_addr, clientIP, sizeof(clientIP)) == NULL) {
+		if (inet_ntop(AF_INET, &tListenAddr.sin_addr, clientIP, sizeof(clientIP)) == NULL) {//ip주소를 받아오는 곳
 			cout << "에러" << endl;
 		}
 		cout << "Client Connected" << clientIP << endl;//inet_ntoa도 ip주소를 받아오는데 해당 함수가 getpeername과 차이는?//현재 이 부분 에러 일으킴
 		//recv 부분
 		while (true) {
-			char recvBuffer[1000];
-			//int recvLen = recv(hClient, recvBuffer, PACKET_SIZE, 0);//그냥 원래의 코드 문자열을 전송받음
+			char recvBuffer[PACKET_SIZE];
+			int recvLen = recv(hClient, recvBuffer, PACKET_SIZE, 0);//그냥 원래의 코드 문자열을 전송받음 (정상 작동)
 			//recv(hClient, (char*)&rinfo, sizeof(rinfo), 0);
 			//username = ntohl(rinfo.name);
 			//year = ntohl(rinfo.year);
-			int recvLen = recv(hClient, (char*)&rinfo, sizeof(rinfo), 0);//구조체 정보를 전송받음
-			
+			//int recvLen = recv(hClient, (char*)&rinfo, sizeof(rinfo), 0);//구조체 정보를 전송받음
+
 			if (recvLen == SOCKET_ERROR) {
 				if (WSAGetLastError() == WSAEWOULDBLOCK) {
 					continue;//non block하기위한 부분 block되면 continue해라
@@ -124,10 +134,24 @@ int main() {
 					if (WSAGetLastError() == WSAEWOULDBLOCK) {
 						continue;//기본적으로 continue
 					}
+
+
+					cout << "send Data: Len" << recvLen << endl;
+					cout << "send Data :" << recvBuffer << endl;
 					break;
 				}
-				//cout << "send Data: Len" << recvLen << endl;
-				cout << "send Data :" << rinfo.content << endl;
+
+
+
+				/*istringstream archive_stream(recvBuffer);
+				boost::archive::text_iarchive archive(archive_stream);
+
+				archive >> rinfo;
+				cout << "==========================================================================" << endl;
+				cout << "rinfo name" << rinfo.name;
+				cout << "rinfo message" << rinfo.content << endl;*/
+				//cout << "send Data :" << rinfo.content << endl;
+				//cout << "Data size : " << sizeof(rinfo) << endl;
 				//cout << year<< endl;
 				break;
 			}
@@ -138,7 +162,7 @@ int main() {
 
 	char cBuffer[PACKET_SIZE] = { 0 };
 
-	t1.join();
+	//t1.join();
 
 	closesocket(hClient);
 	closesocket(hListen);
