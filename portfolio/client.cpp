@@ -1,4 +1,4 @@
-
+//client
 // testprojeect.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
 // 여기서 실시간 채팅 프로그램으로 바꿔야함 연결이 끊긴 후 다시 연결 했을때 연결 가능함 다만 지금은 고정된 메시지만 보내고 있는데 여기서 채팅이 가능하도록 수정해야함
 //실행되는코드 쓰레드 사용?
@@ -13,12 +13,17 @@
 #include <string>
 #include <chrono>//c++20기준
 #include<format>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/serialization/string.hpp>
+
+
 
 #pragma comment(lib, "ws2_32")
 
-#define PORT	4578// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
+#define PORT	12345// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
 #define PACKET_SIZE 1024
-#define SERVER_IP "192.168.219.106"// 서버의 ip로 맞춰줘야함//"192.168.219.100"
+#define SERVER_IP "192.168.219.108"// 서버의 ip로 맞춰줘야함//"192.168.219.100"
 
 #pragma once
 
@@ -29,9 +34,19 @@ using namespace std::chrono;
 struct Info {//server와 client두개가 같아야함
     string name;
     string content;
+    string teststr;
     int year;
     int month;
     int day;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) {
+        ar& name;
+        ar& content;
+        ar& teststr;
+        ar& year;
+        ar& month;
+        ar& day;
+    }
 };
 
 void setInfo(Info* info, string name, string content, int year, int month, int day) {
@@ -83,19 +98,33 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
         cout << sec << endl;
         message = s + sec + "//  사용자>>" + name + message;
         cmessage = message.c_str();
+
+
+        ostringstream archive_stream;//boost 사용 부분
+        boost::archive::text_oarchive struct_archive(archive_stream);
+        struct_archive << userInfo;
+        string outbound_data = archive_stream.str();
+        const char* data_ptr = outbound_data.c_str();
+        size_t data_size = outbound_data.size();
+        memcpy(InfoBuffer, &outbound_data, sizeof(outbound_data));//InfoBuffer에 userInfo 메모리를 복사 하는 과정
+        send(socket, data_ptr, data_size + 1, 0);
+        cout << data_ptr << endl;
         //cout << sizeof(name) << endl << sizeof(buff) << endl;
         //cout << sizeof(message) << endl;
 
-        cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
-        cout << "message 길이" << strlen(cmessage) << endl;
-        cout << s << " - ";
+        //cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
+        //cout << "message 길이" << strlen(cmessage) << endl;
+        //cout << s << " - ";
         cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
-        //send(socket, cmessage, strlen(cmessage) + 1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
-        infosize = sizeof(userInfo);    
+        //send(socket, cmessage, strlen(cmessage) + 1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함(정상 작동)
+        infosize = sizeof(userInfo);
+        cout << "data size :" << infosize << endl;
+        cout << "content size:" << sizeof(userInfo.content) << endl;
         //cout << userInfo.year << endl; 구조체에 year은 잘 저장되어있는상태
-        send(socket, (char*)&userInfo,infosize,0 );
-        //send(socket,)
-
+        //userInfo.year = 12;//
+        //cout << userInfo.year << endl;
+        //send(socket, (char*)&userInfo, PACKET_SIZE, 0);
+        //send(socket, userInfo.content.c_str()+'\n', userInfo.content.size()+1, 0);
 
         //Sleep(1000);
     }
@@ -109,6 +138,7 @@ void sendstruc(string name, int& num, SOCKET& socket) {
     const char* cmessage;
     Info userInfo;
     unsigned char InfoBuffer[sizeof(Info)];
+
     while (!WSAGetLastError()) {
         getline(cin, message);//공백 포함 입력 받는 과정 string 라이브러리에 들어있음
         const local_time<system_clock::duration> local_now = zoned_time{ current_zone(), system_clock::now() }.get_local_time();//로컬 시간
@@ -196,6 +226,7 @@ int main()
             cout << "error 부분";
             break;
         }
+        break;
     }
 
     cout << "Connected to Sever!" << endl;//서버가 연결 되지 않았는데 연결 되었다고 함
