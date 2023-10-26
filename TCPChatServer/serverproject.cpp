@@ -9,6 +9,12 @@
 #include<boost/property_tree/xml_parser.hpp>
 #include<boost/serialization/vector.hpp>
 #include<thread>
+
+#include "ChatServer.h"
+#include <SDKDDKVer.h>
+
+const int MAX_SESSION_COUNT = 100;
+
 //일단은 1:1로 만들어보기
 using namespace boost::asio;
 using namespace std;
@@ -225,7 +231,7 @@ private:
     array<char, 128> m_ReceiveBuffer;
 };
 
-const unsigned short PORT_NUMBER = 31400;//port번호 설정
+//const unsigned short PORT_NUMBER = 31400;//port번호 설정
 
 class TCP_Server {
 public:
@@ -275,6 +281,8 @@ int main() {
     io_service.run();
 
     cout << "네트워크 접속 종료" << endl;
-    //getchar();//이게 왜 있는지 모르겠음
+    getchar();//이게 왜 있는지 모르겠음
+
+
     return 0;
 }

@@ -33,7 +33,7 @@ public:
 		}
 	}
 
-	void start() {
+	void Start() {
 		std::cout << "서버 시작" << std::endl;
 
 		PostAccept();
@@ -57,22 +57,39 @@ public:
 		switch (pheader->nID)
 		{
 		case REQ_IN://접속 요청이 왔을때
-		{
-			PKT_REQ_IN* pPacket = (PKT_REQ_IN*)pData;
-			m_SessionList[nSessionID]->SetName(pPacket->szName);
-			std::cout << "클라이언트 로그인 성공 :" << m_SessionList[nSessionID]->GetName() << std::endl;
+			{
+				PKT_REQ_IN* pPacket = (PKT_REQ_IN*)pData;
+				m_SessionList[nSessionID]->SetName(pPacket->szName);
+				std::cout << "클라이언트 로그인 성공 :" << m_SessionList[nSessionID]->GetName() << std::endl;
 			  
-			PKT_RES_IN SendPkt;
-			SendPkt.Init();
-			SendPkt.bIsSuccess = true;
+				PKT_RES_IN SendPkt;
+				SendPkt.Init();
+				SendPkt.bIsSuccess = true;
 
-			m_SessionList[nSessionID]->PostSend(false, SendPkt.nSize, (char*)&SendPkt);//데이터전송
+				m_SessionList[nSessionID]->PostSend(false, SendPkt.nSize, (char*)&SendPkt);//데이터전송
 
-		}
+			}
 		break;
 		case REQ_CHAT://채팅 요청이 왔을때
-		{}
+			{
+				PKT_REQ_CHAT* pPacket = (PKT_REQ_CHAT*)pData;
+
+				PKT_NOTICE_CHAT SendPkt;
+				SendPkt.Init();
+				strncpy_s(SendPkt.szName, MAX_NAME_LEN, m_SessionList[nSessionID]->GetName(), MAX_NAME_LEN - 1);
+				strncpy_s(SendPkt.szMessage, MAX_MESSAGE_LEN, pPacket->szMessage, MAX_MESSAGE_LEN - 1);
+
+				size_t nTotalSessionCount = m_SessionList.size();
+
+				for (size_t i = 0; i < nTotalSessionCount; ++i) {
+					if (m_SessionList[i]->Socket().is_open()) {
+						m_SessionList[i]->PostSend(false, SendPkt.nSize, (char*)&SendPkt);
+					}
+				}
+			}
+			break;
 		}
+		return;
 	}
 
 
@@ -85,6 +102,26 @@ private:
 
 		}
 		m_bIsAccepting = true;
+		int nSessionID = m_SessionQueue.front();
+
+		m_SessionQueue.pop_front();
+
+		m_acceptor.async_accept(m_SessionList[nSessionID]->Socket(),boost::bind(&ChatServer::handle_accept,this,m_SessionList[nSessionID],boost::asio::placeholders::error)
+		);
+	}
+	void handle_accept(Session* pSession, const boost::system::error_code& error){
+		if (!error) {
+			std::cout << "클라이언트 접속 성공" << pSession->SessionID() << std::endl;
+
+			pSession->Init();
+			pSession->PostReceive();
+
+			PostAccept();
+		}
+		else
+		{
+			std::cout << "error No :" << error.value() << "error Message" << error.message() << std::endl;
+		}
 	}
 	int m_nSeqNumber;
 	bool m_bIsAccepting;
