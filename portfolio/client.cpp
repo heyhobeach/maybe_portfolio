@@ -13,23 +13,20 @@
 #include <string>
 #include <chrono>//c++20기준
 #include<format>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/serialization/string.hpp>
+#include <boost/asio.hpp>
+#include<boost/archive/binary_oarchive.hpp>
+#include<boost/serialization/vector.hpp>
 
-
-
-#pragma comment(lib, "ws2_32")
 
 #define PORT	12345// 예약된 포트를 제외하고 사용해야함  (ex) 21 : FTP포트, 80 : HTTP포트, 8080 : HTTPS포트)
 #define PACKET_SIZE 1024
-#define SERVER_IP "192.168.219.108"// 서버의 ip로 맞춰줘야함//"192.168.219.100"
+#define SERVER_IP "192.168.219.106"// 서버의 ip로 맞춰줘야함//"192.168.219.100"
 
 #pragma once
 
 using namespace std;
 using namespace std::chrono;
-
+using namespace boost::asio;
 
 struct Info {//server와 client두개가 같아야함
     string name;
@@ -38,6 +35,8 @@ struct Info {//server와 client두개가 같아야함
     int year;
     int month;
     int day;
+    vector<double>doubleVector;
+
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) {
         ar& name;
@@ -46,15 +45,17 @@ struct Info {//server와 client두개가 같아야함
         ar& year;
         ar& month;
         ar& day;
+        ar& doubleVector;
     }
 };
 
-void setInfo(Info* info, string name, string content, int year, int month, int day) {
+void setInfo(Info* info, string name, string content, int year, int month, int day, vector<double> doubleVector = { 3.14,5.2,1.2 }) {
     info->name = name;
     info->content = content;
     info->year = year;
     info->month = month;
     info->day = day;
+    info->doubleVector = doubleVector;
 }
 
 void printInfo(Info* info) {
@@ -63,6 +64,10 @@ void printInfo(Info* info) {
     cout << "year :" << info->year << endl;
     cout << "month :" << info->month << endl;
     cout << "day :" << info->day << endl;
+    cout << "vector" << endl;
+    for (auto i : info->doubleVector) {
+        cout << i << " ";
+    }cout << endl;
 }
 
 
@@ -79,19 +84,13 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
         const local_time<system_clock::duration> local_now = zoned_time{ current_zone(), system_clock::now() }.get_local_time();//로컬 시간
         const time_point<std::chrono::local_t, std::chrono::days> dp = std::chrono::floor<std::chrono::days>(local_now);//pratice 프로젝트에서 확인
 
-        chrono::year_month_day ymd{dp};
-        chrono::hh_mm_ss time{std::chrono::floor< std::chrono::seconds>(local_now - dp)};
-        //std::chrono::year_month_day ymd{dp};
-        //seconds local_sec = duration_cast<seconds>(local_now).count();
-
-        //string s = format("{}", 10);
-
+        std::chrono::year_month_day ymd{dp};
+        std::chrono::hh_mm_ss time{std::chrono::floor< std::chrono::seconds>(local_now - dp)};
 
 
 
         string s = format("{:%Y년 %m월 %d일}", local_now);
         string sec = format("{:%H: %M :%S}", time);
-        //cout << "year is :" << ymd.year() << endl;
         setInfo(&userInfo, name, message, static_cast<int>(ymd.year()), static_cast<unsigned int>(ymd.month()), static_cast<unsigned int>(ymd.day()));//구조체에 현재 사용자 이름, 내용, 년, 월, 일 입력
         memcpy(InfoBuffer, &userInfo, sizeof(Info));//InfoBuffer에 userInfo 메모리를 복사 하는 과정
         printInfo(&userInfo);// 구조체에 메세지 들어갔는지 확인하는 print문
@@ -99,144 +98,38 @@ void send_input(string name, int& num, SOCKET& socket) {//cin에서 메세지 �
         message = s + sec + "//  사용자>>" + name + message;
         cmessage = message.c_str();
 
-
-        ostringstream archive_stream;//boost 사용 부분
-        boost::archive::text_oarchive struct_archive(archive_stream);
-        struct_archive << userInfo;
-        string outbound_data = archive_stream.str();
-        const char* data_ptr = outbound_data.c_str();
-        size_t data_size = outbound_data.size();
-        memcpy(InfoBuffer, &outbound_data, sizeof(outbound_data));//InfoBuffer에 userInfo 메모리를 복사 하는 과정
-        send(socket, data_ptr, data_size + 1, 0);
-        cout << data_ptr << endl;
-        //cout << sizeof(name) << endl << sizeof(buff) << endl;
-        //cout << sizeof(message) << endl;
-
-        //cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
-        //cout << "message 길이" << strlen(cmessage) << endl;
-        //cout << s << " - ";
         cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
-        //send(socket, cmessage, strlen(cmessage) + 1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함(정상 작동)
-        infosize = sizeof(userInfo);
         cout << "data size :" << infosize << endl;
         cout << "content size:" << sizeof(userInfo.content) << endl;
-        //cout << userInfo.year << endl; 구조체에 year은 잘 저장되어있는상태
-        //userInfo.year = 12;//
-        //cout << userInfo.year << endl;
-        //send(socket, (char*)&userInfo, PACKET_SIZE, 0);
-        //send(socket, userInfo.content.c_str()+'\n', userInfo.content.size()+1, 0);
 
-        //Sleep(1000);
     }
 }
 
-
-void sendstruc(string name, int& num, SOCKET& socket) {
-    char buff[PACKET_SIZE] = { 0 };
-    string message = "";
-    string strNum;
-    const char* cmessage;
-    Info userInfo;
-    unsigned char InfoBuffer[sizeof(Info)];
-
-    while (!WSAGetLastError()) {
-        getline(cin, message);//공백 포함 입력 받는 과정 string 라이브러리에 들어있음
-        const local_time<system_clock::duration> local_now = zoned_time{ current_zone(), system_clock::now() }.get_local_time();//로컬 시간
-        const time_point<std::chrono::local_t, std::chrono::days> dp = std::chrono::floor<std::chrono::days>(local_now);//pratice 프로젝트에서 확인
-
-        chrono::year_month_day ymd{dp};
-        chrono::hh_mm_ss time{std::chrono::floor< std::chrono::seconds>(local_now - dp)};
-        //std::chrono::year_month_day ymd{dp};
-        //seconds local_sec = duration_cast<seconds>(local_now).count();
-
-        //string s = format("{}", 10);
-
-
-
-
-        string s = format("{:%Y년 %m월 %d일}", local_now);
-        string sec = format("{:%H: %M :%S}", time);
-        //cout << "year is :" << ymd.year() << endl;
-        setInfo(&userInfo, name, message, static_cast<int>(ymd.year()), static_cast<unsigned int>(ymd.month()), static_cast<unsigned int>(ymd.day()));//구조체에 현재 사용자 이름, 내용, 년, 월, 일 입력
-        memcpy(InfoBuffer, &userInfo, sizeof(Info));//InfoBuffer에 userInfo 메모리를 복사 하는 과정
-        printInfo(&userInfo);// 구조체에 메세지 들어갔는지 확인하는 print문
-        cout << sec << endl;
-        message = s + sec + "//  사용자>>" + name + message;
-        cmessage = message.c_str();
-        //cout << sizeof(name) << endl << sizeof(buff) << endl;
-        //cout << sizeof(message) << endl;
-
-        cout << sizeof(cmessage) << endl;// 이게 지금 8로 잘림
-        cout << "message 길이" << strlen(cmessage) << endl;
-        cout << s << " - ";
-        cout << "전송 메세지 내용 : " << "\"" << cmessage << "\"" << endl;
-        send(socket, cmessage, strlen(cmessage) + 1, 0);//원래는 sizeof(cmessage)인데 sizeof(cmessage)가 8로 나와서 전송에서 잘리는 현상 발생 해당 size를 딱 맞게 수정 하는 방법을 찾아야함 -> strlen으로 char로 받더라도 길이만큼 받아서 전송함 +1을 해서 뒤에 널을 넣을수 있도록함
-        //send(socket,)
-
-
-        //Sleep(1000);
-    }
-
-}
 
 int main()
 {
-    WSAData wsaData;
-    int testNum = 0;
-    if (::WSAStartup(MAKEWORD(2, 2), &wsaData))
-        return 0;
+    try {
+        io_context ioContext;//io_context객체 생성 해서 비동기 i/o 작업 관리, io_service와 거의 유사한 작업 수행
+        ip::tcp::socket socket(ioContext);//클라이언트 소켓을 생성
+        socket.connect(ip::tcp::endpoint(ip::address::from_string("127.0.0.1"), PORT));//endpoint 네트워크 주소 설정, 이 주소로 클라이언트가 접속
 
-    SOCKET clientSocket = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == INVALID_SOCKET)
-        return 0;
 
-    u_long on = 1;
-    if (::ioctlsocket(clientSocket, FIONBIO, &on) == INVALID_SOCKET)
-        return 0;
-    string name = "";
-    SOCKADDR_IN serverAddr;
-    ::memset(&serverAddr, 0, sizeof(serverAddr));
-    serverAddr.sin_family = AF_INET;
-    ::inet_pton(AF_INET, SERVER_IP, &serverAddr.sin_addr);
-    serverAddr.sin_port = ::htons(PORT);
-    Sleep(1000);
-    cout << "사용자 이름 입력 >>";
-    cin >> name;
+        Info sendInfoData;
+        setInfo(&sendInfoData, "jungmu", "hello jungmu", 2023, 9, 23);
 
-    thread t1(send_input, name, ref(testNum), ref(clientSocket));//레퍼런스로 전달하려면 ref 함수로 감싸야함
+        std::ostringstream archiveStream;//직렬화변수
+        boost::archive::binary_oarchive archive(archiveStream);//얘네 아마 클래스? 함수?
+        archive << sendInfoData;//직렬화 할 데이터를 archive에 담는다
 
-    // Connect
-    while (true)
-    {
+        string serializedData = archiveStream.str();//string으로 변환
+        boost::asio::write(socket, boost::asio::buffer(serializedData));
+        boost::system::error_code error;
 
-        if (::connect(clientSocket, (SOCKADDR*)&serverAddr, sizeof(serverAddr)) == SOCKET_ERROR)
-        {
-            // 원래 블록했어야 했는데 ... 너가 논블로킹으로 하라며?
-            if (::WSAGetLastError() == WSAEWOULDBLOCK)
-                cout << "non blocking test";//연결 안 될경우 계속 해당 메시지 출력
-            continue;
+        socket.close();
+        //size_t length=socket.read_some()
 
-            if (::WSAGetLastError() == WSAEISCONN) {
-                cout << "여기에 걸림" << endl;
-                break;
-            }
-
-            // Error
-
-            cout << "error 부분";
-            break;
-        }
-        break;
     }
-
-    cout << "Connected to Sever!" << endl;//서버가 연결 되지 않았는데 연결 되었다고 함
-
-    char sendBuffer[100] = "Hello World";
-
-    t1.join();
-    // 소켓 리소스 반환
-    ::closesocket(clientSocket);
-
-    // 윈속 종료
-    ::WSACleanup();
+    catch (std::exception& e) {
+        cerr << "Exception: " << e.what() << endl;//cerr란?
+    }
 }
