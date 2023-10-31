@@ -4,43 +4,48 @@
 
 
 
-Session::Session(int nSessionID, boost::asio::io_context& io_context, ChatServer* pServer) :m_Socket(io_context), m_nSessionID(nSessionID), m_pServer(pServer) {
+Session::Session(int nSessionID, boost::asio::io_context& io_context, ChatServer* pServer) //Ï§Ñ ÎùÑÏö∞Îäî Ïù¥Ïú† ÎîîÎ≤ÑÍπÖ ÌïòÍ∏∞ Ïâ¨Ïö∞Î†§Í≥†?
+	:m_Socket(io_context), 
+	m_nSessionID(nSessionID), 
+	m_pServer(pServer) {
 }
 
 
 Session::~Session(){
-	while (m_SendDataQueue.empty() == false) {//∏∏æ‡ ≈• æ»ø° µ•¿Ã≈Õ∞° ¿÷¥Ÿ∏È
-		delete[] m_SendDataQueue.front();//≈• æ’∫Œ∫– ªË¡¶
-		m_SendDataQueue.pop_front();//∏ﬁ∏∏Æ ªË¡¶ deleteøÕ pop_front¬˜¿Ã?
+	while (m_SendDataQueue.empty() == false) {//ÎßåÏïΩ ÌÅê ÏïàÏóê Îç∞Ïù¥ÌÑ∞Í∞Ä ÏûàÎã§Î©¥
+		delete[] m_SendDataQueue.front();//ÌÅê ÏïûÎ∂ÄÎ∂Ñ ÏÇ≠Ï†ú
+		m_SendDataQueue.pop_front();//Î©îÎ™®Î¶¨ ÏÇ≠Ï†ú deleteÏôÄ pop_frontÏ∞®Ïù¥?
 	}
 }
 
 
 
 void Session::Init(){
-	m_nPacketBufferMark = 0;//m_nPacketBufferMark√ ±‚»≠
+	m_nPacketBufferMark = 0;//m_nPacketBufferMarkÏ¥àÍ∏∞Ìôî
 }
 
 void Session::PostReceive() {
-	m_Socket.async_read_some(boost::asio::buffer(m_ReceiveBuffer), boost::bind(&Session::handle_receive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));//µ•¿Ã≈Õ ºˆΩ≈
+	m_Socket.async_read_some(
+		boost::asio::buffer(m_ReceiveBuffer), 
+		boost::bind(&Session::handle_receive, this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred));//Îç∞Ïù¥ÌÑ∞ ÏàòÏã†
 }
 
 void Session::PostSend(const bool bImmediately, const int nSize, char* pData){
 	char* pSendData = nullptr;
-	if (bImmediately == false) {//µ•¿Ã≈Õ∏¶ ∫πªÁ«œ¥¬ ∞˙¡§
+	if (bImmediately == false) {//Îç∞Ïù¥ÌÑ∞Î•º Î≥µÏÇ¨ÌïòÎäî Í≥ºÏ†ï
 		pSendData = new char[nSize];
-		memcpy(pSendData, pData, nSize);//pSendDataø° pData≥ªøÎ¿ª ∫πªÁ
-		m_SendDataQueue.push_back(pSendData);//≈•ø° µ•¿Ã≈Õ ª¿‘
+		memcpy(pSendData, pData, nSize);//pSendDataÏóê pDataÎÇ¥Ïö©ÏùÑ Î≥µÏÇ¨
+		m_SendDataQueue.push_back(pSendData);//ÌÅêÏóê Îç∞Ïù¥ÌÑ∞ ÏÇΩÏûÖ
 	}
 	else {
 		pSendData = pData;
 	}
 
-	if (bImmediately==false&&m_SendDataQueue.size()>1)//ø°∑ØªÁ«◊
+	if (bImmediately==false&&m_SendDataQueue.size()>1)//ÏóêÎü¨ÏÇ¨Ìï≠
 	{
 		return;
 	}
-	boost::asio::async_write(m_Socket, boost::asio::buffer(pSendData, nSize), boost::bind(&Session::handle_write,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));//∫πªÁ«— µ•¿Ã≈Õ∏¶ ¿¸º€
+	boost::asio::async_write(m_Socket, boost::asio::buffer(pSendData, nSize), boost::bind(&Session::handle_write,this,boost::asio::placeholders::error,boost::asio::placeholders::bytes_transferred));//Î≥µÏÇ¨Ìïú Îç∞Ïù¥ÌÑ∞Î•º Ï†ÑÏÜ°
 }
 
 void Session::handle_write(const boost::system::error_code& error, size_t bytes_transferred){
@@ -59,7 +64,7 @@ void Session::handle_write(const boost::system::error_code& error, size_t bytes_
 void Session::handle_receive(const boost::system::error_code& error, size_t bytes_transferred){
 	if (error) {
 		if (error == boost::asio::error::eof) {
-			std::cout << "≈¨∂Û¿Ãæ∆ÆøÕ¿« ø¨∞· ≤˜±Ë" << std::endl;
+			std::cout << "ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏ÏôÄÏùò Ïó∞Í≤∞ ÎÅäÍπÄ" << std::endl;
 		}
 		else {
 			std::cout << "error No :" << error.value() << "error Message : " << error.message() << std::endl;
@@ -69,11 +74,11 @@ void Session::handle_receive(const boost::system::error_code& error, size_t byte
 	else {
 		memcpy(&m_PacketBuffer[m_nPacketBufferMark], m_ReceiveBuffer.data(), bytes_transferred);
 
-		int nPacketData = m_nPacketBufferMark + bytes_transferred;//m_nPacketbufferMark¿« ¿ßƒ°∏¶ ∞Ëº” ø≈∞‹¡‹
+		int nPacketData = m_nPacketBufferMark + bytes_transferred;//m_nPacketbufferMarkÏùò ÏúÑÏπòÎ•º Í≥ÑÏÜç ÏòÆÍ≤®Ï§å
 		int nReadData = 0;
 
 		while (nPacketData > 0) {
-			if (nPacketData > 0) {
+			if (nPacketData <sizeof(PACKET_HEADER)) {//Ìå®ÌÇ∑ ÏÇ¨Ïù¥Ï¶àÍ∞Ä Ìó§ÎçîÎ≥¥Îã§ ÏûëÎã§Î©¥ -> Ïò§Î•ò
 				break;
 			}
 
@@ -82,7 +87,7 @@ void Session::handle_receive(const boost::system::error_code& error, size_t byte
 			if (pHeader->nSize <= nPacketData) {
 				m_pServer->ProcessPacket(m_nSessionID, &m_PacketBuffer[nReadData]);
 
-				nPacketData -= pHeader->nSize;//¿–¿∫∏∏≈≠ ≈◊¿Ã≈Õ ¿ßƒ° ¡Ÿ¿”
+				nPacketData -= pHeader->nSize;//ÏùΩÏùÄÎßåÌÅº ÌÖåÏù¥ÌÑ∞ ÏúÑÏπò Ï§ÑÏûÑ
 				nReadData += pHeader->nSize;
 			}
 			else {
