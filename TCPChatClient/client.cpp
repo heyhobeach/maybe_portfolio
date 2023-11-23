@@ -245,7 +245,7 @@ private:
 	  
 
 private:
-	boost::asio::io_context& m_IOService;
+	boost::asio::io_context& m_IOService;//해당 라인이 필요한가?
 	boost::asio::ip::tcp::socket m_Socket;
 
 	std::array<char, 512> m_ReceiveBuffer;
