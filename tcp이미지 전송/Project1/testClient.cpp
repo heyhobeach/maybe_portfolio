@@ -32,6 +32,7 @@ public:
 	}
 	void Connect(boost::asio::ip::tcp::endpoint endpoint) {
 		m_Socket.connect(endpoint);
+		std::cout << "서버 접속완료 " << std::endl;
 	}
 
 	void sendMessage() {
@@ -101,23 +102,25 @@ int main(void) {
 			//std::cin >> temp;//해당 부분 수정 필요
 			if (temp == "!img") {//넘어오고 하는데 현재 데이터를 받지를 못함 그래서 강제 종료 되는 부분
 				std::cout << "input !img - image send" << std::endl;
-				std::ifstream imageFile("20180530_155458.jpg", std::ios::binary);//binary형태 즉 2진 데이터로 데이터를 받아온다는것
-				if (!imageFile) {
-					std::cerr << "Error opening file" << std::endl;
-					return 1;
-				}
-				boost::system::error_code error;
-				uintmax_t fileSize = boost::filesystem::file_size("20180530_155458.jpg");
-				std::cout << fileSize << std::endl;
-				boost::asio::write(socket, boost::asio::buffer(&fileSize, sizeof(fileSize)), error);//파일 크기 전송
+				string filename = "20180530_155458.jpg";
+				client.sendImage(filename);
+				//std::ifstream imageFile(filename, std::ios::binary);//binary형태 즉 2진 데이터로 데이터를 받아온다는것
+				//if (!imageFile) {
+				//	std::cerr << "Error opening file" << std::endl;
+				//	return 1;
+				//}
+				//boost::system::error_code error;
+				//uintmax_t fileSize = boost::filesystem::file_size(filename);
+				//std::cout << fileSize << std::endl;
+				//boost::asio::write(socket, boost::asio::buffer(&fileSize, sizeof(fileSize)), error);//파일 크기 전송
 				//std::ifstream imageFile("", std::ios::binary);
-				const size_t bufferSize = 1024;
-				char buffer[bufferSize];
+				//const size_t bufferSize = 1024;
+				//char buffer[bufferSize];
 
-				while (!imageFile.eof()) {
-					imageFile.read(buffer, bufferSize);
-					boost::asio::write(socket, boost::asio::buffer(buffer, imageFile.gcount()), error);
-				}
+				//while (!imageFile.eof()) {
+					//imageFile.read(buffer, bufferSize);
+					//boost::asio::write(socket, boost::asio::buffer(buffer, imageFile.gcount()), error);
+				//}
 			}
 			
 
